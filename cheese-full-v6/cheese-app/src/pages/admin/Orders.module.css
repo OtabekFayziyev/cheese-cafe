@@ -194,3 +194,5 @@
 .detailActions { display:flex; gap:10px; margin-top:4px; }
 .detailCancelBtn { flex:1; padding:13px; border-radius:var(--r-md); background:var(--red-soft); border:1.5px solid var(--red); color:var(--red); font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font-body); }
 .detailNextBtn   { flex:2; padding:13px; border-radius:var(--r-md); background:var(--yellow); border:none; color:#1A1A1A; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font-body); box-shadow:var(--shadow-yellow); }
+.phoneLink { color: var(--blue); font-weight: 700; text-decoration: none; }
+.phoneLink:hover { text-decoration: underline; }

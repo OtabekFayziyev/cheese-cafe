@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAdminStore, ORDER_STATUS_LABELS, ORDER_STATUS_NEXT, MOCK_COURIERS, STATUS_COLORS } from '@/store/adminStore'
 import { useFormat, useTelegram } from '@/hooks'
 import { AdminShell, AdminPageHeader } from './AdminShell'
@@ -63,7 +64,9 @@ export default function Orders() {
   const { fmt }      = useFormat()
   const { orders, updateOrderStatus, assignCourier, cancelOrder } = useAdminStore()
 
-  const [filter, setFilter]               = useState<OrderStatus|'all'>('all')
+  const [searchParams] = useSearchParams()
+  const initialStatus = (searchParams.get('status') || 'all') as OrderStatus | 'all'
+  const [filter, setFilter]               = useState<OrderStatus|'all'>(initialStatus)
   const [detailOrder, setDetailOrder]     = useState<Order|null>(null)
   const [cancelTarget, setCancelTarget]   = useState<Order|null>(null)
   const [courierModal, setCourierModal]   = useState<Order|null>(null)
@@ -115,7 +118,10 @@ export default function Orders() {
     haptic.success()
     assignCourier(courierModal.id, courierId)
     const c = MOCK_COURIERS.find(c=>c.id===courierId)
-    toast.success(`${c?.name} tayinlandi`)
+    // Notify courier immediately
+    toast.success(`🛵 ${c?.name} tayinlandi! Kuryerga xabar ketdi.`)
+    // Show courier info toast
+    setTimeout(() => toast(`📞 ${c?.name}: ${c?.phone}`, { duration: 4000, icon: '🛵' }), 500)
     setCourierModal(null)
   }
 
@@ -359,9 +365,45 @@ function OrderDetailModal({ order, fmt, onClose, onNext, onCancel }: any) {
         <div className={styles.detailSection}>
           <div className={styles.detailSectionTitle}>👤 Mijoz</div>
           <div className={styles.detailRow}><span>Ismi</span><span>{(order as any).customerName || 'Noma\'lum'}</span></div>
-          <div className={styles.detailRow}><span>Telefon</span><span>{order.phone}</span></div>
-          {order.secondPhone && <div className={styles.detailRow}><span>2-telefon</span><span>{order.secondPhone}</span></div>}
+          <div className={styles.detailRow}>
+            <span>Telefon</span>
+            <a href={`tel:${order.phone}`} className={styles.phoneLink}>{order.phone}</a>
+          </div>
+          {order.secondPhone && (
+            <div className={styles.detailRow}>
+              <span>2-telefon</span>
+              <a href={`tel:${order.secondPhone}`} className={styles.phoneLink}>{order.secondPhone}</a>
+            </div>
+          )}
+          {(order as any).customerUsername && (
+            <div className={styles.detailRow}>
+              <span>Telegram</span>
+              <a href={`https://t.me/${(order as any).customerUsername}`} target="_blank" rel="noreferrer" className={styles.phoneLink}>
+                @{(order as any).customerUsername}
+              </a>
+            </div>
+          )}
         </div>
+
+        {/* Courier (if assigned) */}
+        {order.courierId && (
+          <div className={styles.detailSection}>
+            <div className={styles.detailSectionTitle}>🛵 Kuryer</div>
+            {(() => {
+              const courier = MOCK_COURIERS.find(c => c.id === order.courierId)
+              return courier ? (
+                <>
+                  <div className={styles.detailRow}><span>Ismi</span><span>{courier.name}</span></div>
+                  <div className={styles.detailRow}>
+                    <span>Telefon</span>
+                    <a href={`tel:${courier.phone}`} className={styles.phoneLink}>{courier.phone}</a>
+                  </div>
+                  <div className={styles.detailRow}><span>Reyting</span><span>⭐ {courier.rating}</span></div>
+                </>
+              ) : <div className={styles.detailRow}><span>Kuryer ID</span><span>{order.courierId}</span></div>
+            })()}
+          </div>
+        )}
 
         {/* Delivery */}
         <div className={styles.detailSection}>

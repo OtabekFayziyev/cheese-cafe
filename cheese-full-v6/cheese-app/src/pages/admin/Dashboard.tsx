@@ -103,7 +103,7 @@ export default function Dashboard() {
 
       {/* Pending alert */}
       {pendingOrders.length > 0 && (
-        <div className={styles.alertBanner} onClick={() => { haptic.medium(); navigate('/admin/orders') }}>
+        <div className={styles.alertBanner} onClick={() => { haptic.medium(); navigate('/admin/orders?status=pending') }}>
           <div className={styles.alertIcon}>🔔</div>
           <div className={styles.alertText}>
             <div className={styles.alertTitle}>{pendingOrders.length} ta yangi buyurtma kutmoqda!</div>
@@ -116,7 +116,7 @@ export default function Dashboard() {
       {/* Recent orders */}
       <div className={styles.sectionHeader}>
         <span className={styles.sectionTitle}>Oxirgi buyurtmalar</span>
-        <button className={styles.sectionLink} onClick={() => navigate('/admin/orders')}>
+        <button className={styles.sectionLink} onClick={() => navigate('/admin/orders?status=pending')}>
           Barchasi →
         </button>
       </div>
