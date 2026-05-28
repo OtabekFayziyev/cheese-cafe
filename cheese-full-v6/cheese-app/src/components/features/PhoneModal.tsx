@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Phone, CheckCircle, X } from 'lucide-react'
 import { useUserStore } from '@/store'
+import { userAPI } from '@/api/client'
 import { useTelegram } from '@/hooks'
 import styles from './PhoneModal.module.css'
 
@@ -14,7 +15,7 @@ export function PhoneModal({ onClose }: PhoneModalProps) {
   const [phone, setPhoneVal] = useState('')
   const [done, setDone]      = useState(false)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const digits = phone.replace(/\D/g, '')
     if (digits.length < 9) {
       haptic.error()
@@ -22,6 +23,12 @@ export function PhoneModal({ onClose }: PhoneModalProps) {
     }
     const full = `+998${digits.slice(-9)}`
     setPhone(full)
+    // Backend ga ham saqlash
+    try {
+      await userAPI.update({ phone: full })
+    } catch (e) {
+      // Silent fail — local ga saqlanadi
+    }
     haptic.success()
     setDone(true)
     setTimeout(onClose, 1400)

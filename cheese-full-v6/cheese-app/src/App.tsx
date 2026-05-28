@@ -66,6 +66,9 @@ function AppRoutes() {
   const [showPhoneModal, setShowPhoneModal] = useState(false)
   useColorScheme()
 
+  // Agar store da user bor va telefon bor — modal chiqmasin
+  const shouldShowModal = !user?.phone
+
   useEffect(() => {
     const init = async () => {
       const tg = (window as any).Telegram?.WebApp
@@ -86,10 +89,11 @@ function AppRoutes() {
             savedPromos:    [],
             savedAddresses: [],
           })
-          // Telefon yo'q bo'lsa modal
+          // Telefon yo'q bo'lsa modal — faqat bir marta
           if (!backendUser.phone) {
             setTimeout(() => setShowPhoneModal(true), 800)
           }
+          // Agar telefon bor — modal chiqmasin, store ni yangilash yetarli
           // Role ga qarab yo'naltirish
           if (backendUser.role === 'ADMIN' || backendUser.role === 'MODERATOR') {
             window.location.href = '/admin'
@@ -155,7 +159,7 @@ function AppRoutes() {
         </Routes>
       </Suspense>
 
-      {showPhoneModal && (
+      {showPhoneModal && shouldShowModal && (
         <PhoneModal onClose={() => setShowPhoneModal(false)} />
       )}
 
