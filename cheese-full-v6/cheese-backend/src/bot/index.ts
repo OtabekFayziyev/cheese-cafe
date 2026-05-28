@@ -27,9 +27,9 @@ bot.command('start', async (ctx) => {
   // Yangi foydalanuvchi yoki telefon raqami yo'q
   if (!user || !user.phone) {
     await ctx.reply(
-      `🧀 *CHEESE Cafe ga xush kelibsiz, ${tgUser.first_name}!*\n\n` +
+      `🧀 *Cheese Cafe ga xush kelibsiz, ${tgUser.first_name}!*\n\n` +
       `Buyurtma berish va yetkazib olish uchun avval *telefon raqamingizni* yuboring.\n\n` +
-      `Bu sizning buyurtmangizni tez va yetkazib berish uchun kerak 🚀`,
+      `Bu sizning buyurtmangizni tez va sifatli yetkazib berish uchun kerak 🚀`,
       {
         parse_mode: 'Markdown',
         reply_markup: new Keyboard()
@@ -90,7 +90,7 @@ bot.on('message:contact', async (ctx) => {
 // ── /menu buyrug'i ──
 bot.command('menu', async (ctx) => {
   await ctx.reply(
-    '🍽️ *CHEESE Cafe Menyu*',
+    '🍽️ *Cheese Cafe Menyu*',
     {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
@@ -297,19 +297,12 @@ export async function notifyCourierNewTask(courierTelegramId: bigint, order: any
 async function sendWelcomeBack(ctx: any, name: string) {
   await ctx.reply(
     `🧀 *Xush kelibsiz, ${name}!*\n\n` +
-    `CHEESE Cafe dan mazali taomlar buyurtma qiling 🍔🍕🍰\n\n` +
-    `⏰ Ish vaqti: 09:00 – 05:00\n` +
-    `🚀 Yetkazish: 30-45 daqiqa`,
+    `Cheese Cafe dan mazali taomlar buyurtma qiling 🍔🍕🍰\n\n` +
+    `⏰ Ish vaqti: 09:00 – 04:30\n` +
+    `🚀 Yetkazish: 20-30 daqiqa\n\n` +
+    `👇 Pastdagi *Buyurtma* tugmasini bosing!`,
     {
       parse_mode: 'Markdown',
-      reply_markup: new InlineKeyboard()
-        .webApp('🛒 Buyurtma berish', `${MINI_APP_URL}/user`)
-        .row()
-        .webApp('🍽️ Menyu', `${MINI_APP_URL}/user`)
-        .row()
-        .webApp('👤 Profilim', `${MINI_APP_URL}/user/profile`)
-        .row()
-        .webApp('❤️ Sevimlilar', `${MINI_APP_URL}/user/favs`),
     }
   )
 }
