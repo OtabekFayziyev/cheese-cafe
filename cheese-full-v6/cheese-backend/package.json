@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "postinstall": "prisma generate",
+    "postinstall": "npx prisma generate",
     "dev":         "tsx watch src/index.ts",
     "start":       "tsx src/index.ts",
     "db:push":     "prisma db push",
