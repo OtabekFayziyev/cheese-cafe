@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev":     "tsx watch src/index.ts",
-    "build":   "prisma generate",
-    "start":   "node --import tsx/esm src/index.ts",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "postinstall": "prisma generate",
+    "dev":         "tsx watch src/index.ts",
+    "start":       "node --import tsx/esm src/index.ts",
+    "db:push":     "prisma db push",
+    "db:seed":     "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client":      "^5.22.0",
