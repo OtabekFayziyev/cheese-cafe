@@ -5,7 +5,6 @@ import { Toaster } from 'react-hot-toast'
 import { useUserStore } from '@/store'
 import { useColorScheme } from '@/hooks'
 import { DevSwitcher } from '@/components/ui/DevSwitcher'
-import { PhoneModal } from '@/components/features/PhoneModal'
 import { authAPI, menuAPI } from '@/api/client'
 import type { AppUser } from '@/types'
 
@@ -63,11 +62,7 @@ const Loader = () => (
 function AppRoutes() {
   const setUser  = useUserStore(s => s.setUser)
   const user     = useUserStore(s => s.user)
-  const [showPhoneModal, setShowPhoneModal] = useState(false)
   useColorScheme()
-
-  // Agar store da user bor va telefon bor — modal chiqmasin
-  const shouldShowModal = !user?.phone
 
   useEffect(() => {
     const init = async () => {
@@ -89,11 +84,7 @@ function AppRoutes() {
             savedPromos:    [],
             savedAddresses: [],
           })
-          // Telefon yo'q bo'lsa modal — faqat bir marta
-          if (!backendUser.phone) {
-            setTimeout(() => setShowPhoneModal(true), 800)
-          }
-          // Agar telefon bor — modal chiqmasin, store ni yangilash yetarli
+
           // Role ga qarab yo'naltirish
           if (backendUser.role === 'ADMIN' || backendUser.role === 'MODERATOR') {
             window.location.href = '/admin'
@@ -115,8 +106,7 @@ function AppRoutes() {
               bonusPoints: 0,
               savedPromos: [], savedAddresses: [],
             })
-            setTimeout(() => setShowPhoneModal(true), 800)
-          }
+              }
         }
       } else if (!user) {
         // ── Dev fallback ──
@@ -159,9 +149,6 @@ function AppRoutes() {
         </Routes>
       </Suspense>
 
-      {showPhoneModal && shouldShowModal && (
-        <PhoneModal onClose={() => setShowPhoneModal(false)} />
-      )}
 
       <DevSwitcher />
     </>
