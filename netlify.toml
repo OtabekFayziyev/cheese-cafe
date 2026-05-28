@@ -1,0 +1,13 @@
+[build]
+  base    = "cheese-full-v6/cheese-app"
+  command = "npm install && npm run build"
+  publish = "cheese-full-v6/cheese-app/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS    = "--include=dev"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
