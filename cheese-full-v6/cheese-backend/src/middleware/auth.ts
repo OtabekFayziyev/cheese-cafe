@@ -98,7 +98,7 @@ async function handleUserLogin(tgUser: any, reply: FastifyReply, req: FastifyReq
   }
 
   // JWT token yaratish
-  const token = await (req as any).jwtSign(
+  const token = await (reply as any).jwtSign(
     { userId: user.id, telegramId: String(user.telegramId), role: user.role },
     { expiresIn: '7d' }
   )
