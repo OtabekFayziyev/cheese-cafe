@@ -116,10 +116,9 @@ function AppRoutes() {
           role: 'user', bonusPoints: 45, savedPromos: [], savedAddresses: [],
         })
       }
-      setLoading(false)
     }
 
-    init()
+    init().finally(() => setLoading(false))
   }, [])
 
   if (loading) return <Loader />
