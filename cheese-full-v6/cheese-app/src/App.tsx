@@ -77,12 +77,17 @@ function AppRoutes() {
             savedAddresses: [],
           })
 
-          // Role ga qarab yo'naltirish
+          // Role ga qarab yo'naltirish — faqat bir marta
           const role = backendUser.role || 'USER'
+          const currentPath = window.location.pathname
           if (['ADMIN','MODERATOR','CASHIER'].includes(role)) {
-            window.location.href = '/admin'
+            if (!currentPath.startsWith('/admin')) {
+              window.location.href = '/admin'
+            }
           } else if (role === 'COURIER') {
-            window.location.href = '/courier'
+            if (!currentPath.startsWith('/courier')) {
+              window.location.href = '/courier'
+            }
           }
 
         } catch (e) {
