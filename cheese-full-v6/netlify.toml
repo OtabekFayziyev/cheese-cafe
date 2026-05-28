@@ -1,0 +1,7 @@
+[build]
+  base    = "cheese-full-v6/cheese-app"
+  command = "npm install && npx --no-install vite build"
+  publish = "cheese-full-v6/cheese-app/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
