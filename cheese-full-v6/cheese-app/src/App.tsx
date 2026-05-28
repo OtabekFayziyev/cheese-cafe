@@ -52,7 +52,6 @@ const Loader = () => (
 
 function AppRoutes() {
   const setUser = useUserStore(s => s.setUser)
-  const [loading, setLoading] = useState(true)
   useColorScheme()
 
   useEffect(() => {
@@ -118,10 +117,8 @@ function AppRoutes() {
       }
     }
 
-    init().finally(() => setLoading(false))
+    init()
   }, [])
-
-  if (loading) return <Loader />
 
   return (
     <>
