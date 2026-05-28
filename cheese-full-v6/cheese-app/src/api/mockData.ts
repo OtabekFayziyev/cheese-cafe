@@ -14,7 +14,7 @@ export const CATEGORIES: Category[] = [
 
 export const MENU_ITEMS: MenuItem[] = [
   {
-    id: '1', categoryId: 'burgers',
+    id: 'm1', categoryId: 'burgers',
     name: 'Truffle Burger',
     description: "Qo'l bilan tayyorlangan kotlet, truffle sousi, karamelized piyoz, arugula va briosh non.",
     price: 45000, emoji: '🍔', prepTime: 15,
@@ -27,7 +27,7 @@ export const MENU_ITEMS: MenuItem[] = [
     isAvailable: true, isHot: true, isNew: false, rating: 4.9, soldCount: 312,
   },
   {
-    id: '2', categoryId: 'burgers',
+    id: 'm2', categoryId: 'burgers',
     name: 'Classic BBQ',
     description: "Klassik BBQ sousi, cheddor sir va tandir kotlet bilan tayyorlangan burger.",
     price: 35000, emoji: '🍔', prepTime: 12,
@@ -80,7 +80,7 @@ export const MENU_ITEMS: MenuItem[] = [
     isAvailable: true, isHot: false, isNew: true, rating: 4.5, soldCount: 134,
   },
   {
-    id: '3', categoryId: 'pizza',
+    id: 'm3', categoryId: 'pizza',
     name: 'Margarita',
     description: "Italyan uslubida tayyorlangan, yangi mozzarella va tomat sousi bilan.",
     price: 55000, emoji: '🍕', prepTime: 20,
@@ -92,7 +92,7 @@ export const MENU_ITEMS: MenuItem[] = [
     isAvailable: true, isHot: true, isNew: false, rating: 4.8, soldCount: 275,
   },
   {
-    id: '4', categoryId: 'pizza',
+    id: 'm4', categoryId: 'pizza',
     name: 'Pepperoni',
     description: "Isiqqina, o'tkir pepperoni va mozzarella bilan to'lib-toshgan pitsa.",
     price: 65000, emoji: '🍕', prepTime: 22,
@@ -103,7 +103,7 @@ export const MENU_ITEMS: MenuItem[] = [
     isAvailable: true, isHot: false, isNew: false, rating: 4.6, soldCount: 187,
   },
   {
-    id: '5', categoryId: 'salads',
+    id: 'm5', categoryId: 'salads',
     name: 'Avokado Salad',
     description: "Yangi avokado, pomidor, rukola va sitrus dressing bilan tayyorlangan.",
     price: 28000, emoji: '🥗', prepTime: 8,
@@ -114,7 +114,7 @@ export const MENU_ITEMS: MenuItem[] = [
     isAvailable: true, isHot: false, isNew: true, rating: 4.5, soldCount: 143,
   },
   {
-    id: '6', categoryId: 'soups',
+    id: 'm6', categoryId: 'soups',
     name: "Lag'mon",
     description: "O'zbek uslubida qo'l qorilgan xamir va mol go'shti bilan.",
     price: 22000, emoji: '🍜', prepTime: 18,
@@ -125,7 +125,7 @@ export const MENU_ITEMS: MenuItem[] = [
     isAvailable: true, isHot: false, isNew: false, rating: 4.8, soldCount: 421,
   },
   {
-    id: '7', categoryId: 'sets',
+    id: 'm7', categoryId: 'sets',
     name: 'Family Set',
     description: "2 ta Truffle Burger + 1 ta Margarita + 2 ta Limonata. Oilalar uchun ideal!",
     price: 120000, emoji: '🎁', prepTime: 25,
@@ -133,7 +133,7 @@ export const MENU_ITEMS: MenuItem[] = [
     isAvailable: true, isHot: true, isNew: false, rating: 4.9, soldCount: 89,
   },
   {
-    id: '8', categoryId: 'drinks',
+    id: 'm8', categoryId: 'drinks',
     name: 'Limonata',
     description: "Uy limonatasi, yangi limon va nana barg bilan tayyorlangan.",
     price: 12000, emoji: '🍋', prepTime: 5,
@@ -144,7 +144,7 @@ export const MENU_ITEMS: MenuItem[] = [
     isAvailable: true, isHot: false, isNew: false, rating: 4.4, soldCount: 356,
   },
   {
-    id: '9', categoryId: 'desserts',
+    id: 'm9', categoryId: 'desserts',
     name: 'Cheesecake',
     description: "Klassik New York cheesecake, malina sousi bilan.",
     price: 32000, emoji: '🍰', prepTime: 5,
@@ -155,7 +155,7 @@ export const MENU_ITEMS: MenuItem[] = [
     isAvailable: true, isHot: false, isNew: true, rating: 4.9, soldCount: 201,
   },
   {
-    id: '10', categoryId: 'drinks',
+    id: 'm10', categoryId: 'drinks',
     name: 'Espresso',
     description: "Italyan arabika qahvasi, kuchli va xushbo'y.",
     price: 15000, emoji: '☕', prepTime: 4,
