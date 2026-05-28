@@ -28,8 +28,9 @@ async function bootstrap() {
 
   await registerRoutes(app)
 
-  // Webhook (production)
+  // Webhook (production) — bot.init() avval chaqiriladi
   if (process.env.NODE_ENV === 'production' && process.env.WEBHOOK_URL) {
+    await bot.init()
     app.post('/webhook', async (req, reply) => {
       await bot.handleUpdate(req.body as any)
       return reply.send('ok')
@@ -53,7 +54,7 @@ async function bootstrap() {
   const port = Number(process.env.PORT) || 3000
   await app.listen({ port, host: '0.0.0.0' })
 
-  // Bot
+  // Bot ishga tushirish
   if (process.env.NODE_ENV === 'production' && process.env.WEBHOOK_URL) {
     const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`
     await bot.api.setWebhook(webhookUrl)
