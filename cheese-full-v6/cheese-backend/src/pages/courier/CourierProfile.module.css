@@ -1,0 +1,48 @@
+.hero { background:#111; padding:24px 20px 28px; position:relative; overflow:hidden; }
+.heroBg { position:absolute; inset:0; background:radial-gradient(ellipse at 70% 50%, rgba(245,200,0,.12) 0%, transparent 60%); }
+.avatarRow { display:flex; align-items:center; gap:14px; position:relative; z-index:1; }
+.avatar { width:70px; height:70px; border-radius:20px; background:var(--yellow); display:flex; align-items:center; justify-content:center; font-size:32px; box-shadow:0 8px 24px rgba(245,200,0,.3); flex-shrink:0; }
+.name   { font-family:var(--font-display); font-size:22px; color:#fff; }
+.phone  { font-size:13px; color:rgba(255,255,255,.5); margin-top:2px; }
+.rating { font-size:12px; color:rgba(255,255,255,.6); margin-top:3px; }
+.statusBadge { display:inline-flex; align-items:center; gap:5px; margin-top:7px; padding:4px 10px; border-radius:var(--r-full); background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.3); font-size:11px; font-weight:700; color:#f87171; }
+.statusOnline { background:rgba(34,197,94,.15)!important; border-color:rgba(34,197,94,.3)!important; color:#4ade80!important; }
+.statusDot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+/* Stats card */
+.statsCard { margin:16px 16px 14px; background:#111; border-radius:var(--r-xl); padding:18px; position:relative; overflow:hidden; }
+.statsDecor{ position:absolute; right:-8px; bottom:-10px; font-size:80px; opacity:.08; transform:rotate(-15deg); }
+.statsTitle{ font-family:var(--font-display); font-size:18px; color:var(--yellow); margin-bottom:14px; }
+.statsGrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.statItem  { background:rgba(255,255,255,.07); border-radius:var(--r-md); padding:12px; }
+.statIcon  { font-size:20px; margin-bottom:6px; }
+.statVal   { font-family:var(--font-display); font-size:17px; color:#fff; }
+.statLbl   { font-size:10px; color:rgba(255,255,255,.45); margin-top:3px; }
+/* Section */
+.section { padding:0 16px 14px; }
+.sectionTitle { font-family:var(--font-display); font-size:18px; color:var(--text-primary); margin-bottom:10px; }
+/* Vehicle */
+.vehicleRow { display:flex; gap:10px; }
+.vehicleBtn { flex:1; padding:12px; border-radius:var(--r-md); background:var(--surface-2); border:2px solid var(--border); cursor:pointer; text-align:center; transition:all var(--t-fast); font-family:var(--font-body); }
+.vehicleBtn:hover { border-color:var(--yellow); }
+.vehicleBtnActive { background:var(--yellow-soft)!important; border-color:var(--yellow)!important; box-shadow:var(--shadow-yellow); }
+.vehicleIcon { display:block; font-size:26px; margin-bottom:5px; }
+.vehicleLabel{ font-size:12px; font-weight:700; color:var(--text-primary); }
+/* Online toggle */
+.onlineCard { background:var(--surface); border-radius:var(--r-lg); padding:14px 16px; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.onlineLabel{ font-size:14px; font-weight:700; color:var(--text-primary); }
+.onlineSub  { font-size:12px; color:var(--text-muted); margin-top:3px; }
+.bigToggle  { width:52px; height:28px; border-radius:14px; background:var(--red-soft); border:2px solid var(--red); cursor:pointer; position:relative; transition:all .3s; flex-shrink:0; }
+.bigToggleOn{ background:var(--green-soft)!important; border-color:var(--green)!important; }
+.toggleThumb{ position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:var(--red); transition:all .3s; }
+.bigToggleOn .toggleThumb { left:26px; background:var(--green); }
+/* Menu */
+.menuList { padding:0 16px; }
+.menuItem { display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--border); background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; cursor:pointer; transition:padding-left var(--t-fast); }
+.menuItem:last-child { border-bottom:none; }
+.menuItem:hover { padding-left:6px; }
+.menuIcon  { width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+.menuText  { flex:1; }
+.menuLabel { font-size:14px; font-weight:700; color:var(--text-primary); }
+.menuSub   { font-size:12px; color:var(--text-muted); margin-top:2px; }
+.menuArrow { color:var(--text-muted); font-size:20px; }
+.version   { text-align:center; font-size:11px; color:var(--text-muted); margin-top:16px; font-weight:600; letter-spacing:1px; }

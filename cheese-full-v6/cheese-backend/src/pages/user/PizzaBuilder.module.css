@@ -1,0 +1,146 @@
+.header {
+  padding: 16px 20px 8px;
+  display: flex; align-items: center; gap: 12px;
+}
+.backBtn {
+  width: 40px; height: 40px; border-radius: var(--r-md);
+  background: var(--surface-2); border: 1.5px solid var(--border);
+  font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--text-primary); transition: all var(--t-fast);
+}
+.backBtn:hover { border-color: var(--yellow); }
+.title { font-family: var(--font-display); font-size: 26px; color: var(--text-primary); flex: 1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.priceTag {
+  font-family: var(--font-display); font-size: 20px; color: var(--yellow);
+  background: var(--dark); padding: 6px 14px; border-radius: var(--r-full);
+}
+
+/* Preview */
+.preview { padding: 0 16px 10px; }
+.pizzaViz {
+  display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+}
+.pizzaBase {
+  width: 200px; height: 200px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; box-shadow: 0 8px 32px rgba(200,118,43,.35);
+  transition: all .4s ease;
+}
+.sauceLayer {
+  position: absolute; inset: 0; border-radius: 50%;
+  pointer-events: none;
+}
+.toppingDots { position: absolute; inset: 0; border-radius: 50%; }
+.toppingDot  { position: absolute; }
+.pizzaLabel  { font-size: 24px; letter-spacing: 2px; position: relative; z-index: 2; }
+
+.sizeRow { display: flex; gap: 10px; justify-content: center; }
+.sizeBtn {
+  flex: 1; max-width: 100px; padding: 10px;
+  border-radius: var(--r-md); border: 2px solid var(--border);
+  background: var(--surface-2); cursor: pointer; text-align: center;
+  transition: all var(--t-fast);
+}
+.sizeBtn:hover { border-color: var(--yellow); }
+.sizeBtnActive { border-color: var(--yellow) !important; background: var(--yellow-soft) !important; box-shadow: var(--shadow-yellow); }
+.sizeLetter { font-family: var(--font-display); font-size: 22px; color: var(--text-primary); }
+.sizePrice  { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* Steps indicator */
+.steps {
+  display: flex; gap: 0; padding: 0 16px 14px;
+  overflow-x: auto;
+}
+.stepItem {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  flex: 1; min-width: 56px;
+}
+.stepCircle {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--border); color: var(--text-muted);
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--t-fast);
+}
+.stepActive .stepCircle { background: var(--yellow); color: #1A1A1A; box-shadow: var(--shadow-yellow); }
+.stepDone .stepCircle   { background: var(--green); color: #fff; }
+.stepLabel { font-size: 10px; font-weight: 600; color: var(--text-muted); text-align: center; }
+.stepActive .stepLabel  { color: var(--yellow-dark); font-weight: 700; }
+.stepDone .stepLabel    { color: var(--green); }
+
+/* Step content */
+.stepContent { padding: 0 16px; flex: 1; }
+.stepTitle { font-family: var(--font-display); font-size: 20px; color: var(--text-primary); margin-bottom: 12px; }
+.stepNote  { font-size: 13px; color: var(--text-muted); font-family: var(--font-body); }
+
+.optionRow {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: var(--r-md);
+  border: 2px solid var(--border); background: var(--surface);
+  margin-bottom: 8px; cursor: pointer; text-align: left;
+  transition: all var(--t-fast);
+}
+.optionRow:hover { border-color: var(--yellow); }
+.optionActive   { border-color: var(--yellow) !important; background: var(--yellow-soft) !important; }
+.optionName  { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.optionPrice { font-size: 13px; color: var(--text-muted); }
+.optionCheck { font-size: 16px; color: var(--yellow-dark); font-weight: 800; }
+
+.toppingGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.toppingChip {
+  padding: 10px 12px; border-radius: var(--r-md);
+  border: 2px solid var(--border); background: var(--surface);
+  cursor: pointer; text-align: left; transition: all var(--t-fast);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.toppingChip:hover:not(:disabled)  { border-color: var(--yellow); }
+.toppingChip:disabled               { opacity: .4; }
+.toppingChipActive                  { border-color: var(--yellow) !important; background: var(--yellow-soft) !important; }
+.toppingChip > span:first-child { font-size: 20px; }
+.toppingName  { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.toppingPrice { font-size: 11px; color: var(--text-muted); }
+
+/* Review */
+.reviewCard {
+  background: var(--surface-2); border-radius: var(--r-lg);
+  padding: 16px; margin-bottom: 16px; border: 1.5px solid var(--border);
+}
+.reviewRow {
+  display: flex; justify-content: space-between;
+  font-size: 14px; padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.reviewRow:last-child { border-bottom: none; }
+.reviewRow span:first-child { color: var(--text-muted); }
+.reviewRow span:last-child  { font-weight: 700; }
+
+.qtyRow {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; background: var(--surface-2);
+  border-radius: var(--r-md); margin-bottom: 14px;
+}
+.qBtn {
+  width: 36px; height: 36px; border-radius: var(--r-sm);
+  border: 2px solid var(--border); background: var(--surface);
+  font-size: 20px; font-weight: 800; color: var(--text-primary);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all var(--t-fast);
+}
+.qBtn:hover { background: var(--yellow); border-color: var(--yellow); }
+.qVal   { font-family: var(--font-display); font-size: 22px; color: var(--text-primary); min-width:24px; text-align:center; }
+.qTotal { font-family: var(--font-display); font-size: 20px; color: var(--yellow-dark); margin-left: auto; }
+
+.noteWrap   { margin-bottom: 16px; }
+.noteLabel  { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.noteArea {
+  width: 100%; padding: 12px; border-radius: var(--r-md);
+  background: var(--surface-2); border: 2px solid var(--border);
+  color: var(--text-primary); font-size: 14px; font-family: var(--font-body);
+  resize: none; transition: border-color var(--t-fast);
+}
+.noteArea:focus { outline: none; border-color: var(--yellow); }
+.noteArea::placeholder { color: var(--text-muted); }
+
+/* Nav btns */
+.navBtns { padding: 12px 16px 8px; }

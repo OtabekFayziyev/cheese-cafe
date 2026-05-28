@@ -1,0 +1,48 @@
+.periodRow { display:flex; gap:8px; padding:0 16px 12px; }
+.periodBtn { flex:1; padding:9px; border-radius:var(--r-md); background:var(--surface-2); border:1.5px solid var(--border); font-size:12px; font-weight:700; color:var(--text-muted); cursor:pointer; transition:all var(--t-fast); font-family:var(--font-body); }
+.periodBtn:hover { border-color:var(--yellow); }
+.periodActive { background:var(--yellow)!important; border-color:var(--yellow)!important; color:#1A1A1A!important; }
+
+.dateRow { display:flex; align-items:center; gap:8px; padding:0 16px 12px; }
+.dateInput { flex:1; padding:10px 12px; border-radius:var(--r-md); background:var(--surface-2); border:2px solid var(--border); color:var(--text-primary); font-size:13px; font-family:var(--font-body); transition:border-color var(--t-fast); }
+.dateInput:focus { outline:none; border-color:var(--yellow); }
+.dateSep { color:var(--text-muted); font-weight:700; }
+
+.kpiGrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 16px 14px; }
+.kpi { background:var(--surface); border-radius:var(--r-lg); padding:14px; border:1.5px solid var(--border); border-left-width:4px; transition:transform var(--t-fast); }
+.kpi:hover { transform:translateY(-2px); }
+.kpiIcon  { font-size:22px; margin-bottom:8px; }
+.kpiVal   { font-family:var(--font-display); font-size:20px; color:var(--text-primary); margin-bottom:4px; line-height:1; }
+.kpiLabel { font-size:12px; color:var(--text-muted); font-weight:600; }
+
+.chartCard { margin:0 16px 14px; background:var(--dark); border-radius:var(--r-lg); padding:16px; }
+.chartTitle{ font-size:13px; font-weight:700; color:rgba(255,255,255,.5); margin-bottom:14px; }
+.chart { display:flex; align-items:flex-end; gap:6px; height:100px; }
+.chartCol { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; }
+.chartBarWrap { flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; position:relative; }
+.chartBarVal { font-size:9px; color:rgba(255,255,255,.4); margin-bottom:2px; position:absolute; top:0; }
+.chartBar { width:100%; border-radius:4px 4px 0 0; background:rgba(255,255,255,.15); transition:height .6s ease; min-height:4px; }
+.chartBarToday { background:var(--yellow)!important; }
+.chartLabel { font-size:9px; color:rgba(255,255,255,.4); white-space:nowrap; }
+.chartLabelToday { color:var(--yellow); font-weight:700; }
+
+.sectionTitle { font-family:var(--font-display); font-size:20px; color:var(--text-primary); padding:4px 16px 10px; }
+.topList { padding:0 16px; display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.noData  { font-size:14px; color:var(--text-muted); padding:20px 0; text-align:center; }
+.topItem { display:flex; align-items:center; gap:10px; background:var(--surface); border-radius:var(--r-md); padding:12px; border:1.5px solid var(--border); }
+.topRank { font-family:var(--font-display); font-size:18px; color:var(--text-muted); min-width:28px; }
+.topEmoji{ font-size:28px; }
+.topInfo { flex:1; }
+.topName { font-size:14px; font-weight:700; color:var(--text-primary); }
+.topMeta { font-size:11px; color:var(--text-muted); margin-top:2px; }
+.topBar  { width:60px; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+.topBarFill { height:100%; background:var(--yellow); border-radius:3px; transition:width .6s ease; }
+
+.splitGrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 16px; }
+.splitCard { background:var(--surface); border-radius:var(--r-lg); padding:14px; border:1.5px solid var(--border); }
+.splitTitle{ font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
+.splitRow  { display:flex; justify-content:space-between; font-size:12px; color:var(--text-primary); padding:3px 0; }
+.splitVal  { font-weight:800; }
+.splitBar  { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:10px; }
+.splitFill1{ height:100%; background:var(--yellow); border-radius:3px; transition:width .6s ease; }
+.splitFill2{ height:100%; background:var(--blue); border-radius:3px; transition:width .6s ease; }

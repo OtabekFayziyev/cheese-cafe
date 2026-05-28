@@ -1,0 +1,4 @@
+.header { padding: 16px 20px 10px; display: flex; align-items: baseline; gap: 10px; }
+.pageTitle { font-family: var(--font-display); font-size: 32px; color: var(--dark); }
+.count { font-size: 14px; color: #999; font-weight: 600; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px; }

@@ -1,0 +1,65 @@
+/* Map */
+.mapStub {
+  margin:0 16px 14px; height:240px; border-radius:var(--r-xl);
+  background:linear-gradient(160deg,#0a1a0a,#0d2b0d);
+  position:relative; overflow:hidden;
+  box-shadow:var(--shadow-lg);
+}
+.mapGrid { position:absolute; inset:0; width:100%; height:100%; }
+
+/* Courier dot */
+.courierDot {
+  position:absolute;
+  transform:translate(-50%,-50%);
+  transition:left 1.2s ease, top 1.2s ease;
+  z-index:3;
+}
+.courierDotInner { font-size:24px; line-height:1; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+.courierDotRing  {
+  position:absolute; inset:-8px; border-radius:50%;
+  border:2px solid rgba(245,200,0,.4);
+  animation:ring 2s ease-in-out infinite;
+}
+@keyframes ring { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(2)} }
+
+/* Dest pin */
+.destPin { position:absolute; transform:translate(-50%,-100%); z-index:3; text-align:center; }
+.destPin { font-size:24px; }
+.destLabel { background:rgba(0,0,0,.7); color:#fff; font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-top:2px; }
+
+/* Live badge */
+.liveBadge { position:absolute; top:10px; right:10px; background:rgba(239,68,68,.9); color:#fff; font-size:10px; font-weight:800; padding:4px 8px; border-radius:var(--r-full); display:flex; align-items:center; gap:4px; letter-spacing:.5px; }
+.liveDot   { width:6px; height:6px; border-radius:50%; background:#fff; animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.mapNote { position:absolute; bottom:8px; left:10px; font-size:9px; color:rgba(255,255,255,.3); }
+
+/* Location card */
+.locationCard { margin:0 16px 12px; background:var(--surface); border-radius:var(--r-md); padding:12px 14px; border:1.5px solid var(--border); display:flex; align-items:center; gap:10px; }
+.locationIcon  { font-size:22px; flex-shrink:0; }
+.locationTitle { font-size:11px; font-weight:700; color:var(--text-muted); }
+.locationVal   { font-size:13px; font-weight:600; color:var(--text-primary); margin-top:2px; }
+.refreshBtn    { margin-left:auto; width:34px; height:34px; border-radius:10px; background:var(--surface-2); border:1.5px solid var(--border); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+
+/* Direction card */
+.dirCard { margin:0 16px 12px; background:var(--surface); border-radius:var(--r-lg); padding:16px; border:1.5px solid var(--border); }
+.dirTitle{ font-family:var(--font-display); font-size:18px; color:var(--text-primary); margin-bottom:14px; }
+.dirSteps{ display:flex; flex-direction:column; gap:0; }
+.dirStep { display:flex; align-items:flex-start; gap:12px; }
+.dirDot  { width:14px; height:14px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.dirLine { width:2px; height:20px; background:var(--border); margin:4px 0 4px 6px; }
+.dirStepText { flex:1; }
+.dirStepTitle{ font-size:14px; font-weight:700; color:var(--text-primary); }
+.dirStepSub  { font-size:12px; color:var(--text-muted); margin-top:2px; }
+.navBtn { padding:7px 14px; border-radius:var(--r-md); background:var(--blue-soft); border:1.5px solid #bfdbfe; color:var(--blue); font-size:12px; font-weight:700; text-decoration:none; white-space:nowrap; flex-shrink:0; }
+.etaRow  { display:flex; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }
+.etaItem { flex:1; text-align:center; }
+.etaVal  { font-family:var(--font-display); font-size:18px; color:var(--text-primary); }
+.etaLbl  { font-size:11px; color:var(--text-muted); margin-top:2px; }
+/* Pickup */
+.pickupInfo    { font-size:14px; color:var(--text-muted); margin-bottom:12px; }
+.cafeNavBtn    { display:block; padding:13px; border-radius:var(--r-md); background:var(--yellow); color:#1A1A1A; font-size:15px; font-weight:700; text-decoration:none; text-align:center; box-shadow:var(--shadow-yellow); }
+/* No order */
+.noOrderCard { margin:0 16px; background:var(--surface); border-radius:var(--r-lg); padding:32px 20px; text-align:center; border:1.5px solid var(--border); }
+.noOrderIcon { font-size:48px; margin-bottom:10px; }
+.noOrderText { font-family:var(--font-display); font-size:20px; color:var(--text-primary); margin-bottom:6px; }
+.noOrderSub  { font-size:13px; color:var(--text-muted); line-height:1.6; }
