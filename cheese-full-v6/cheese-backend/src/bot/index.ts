@@ -29,7 +29,7 @@ bot.command('start', async (ctx) => {
     await ctx.reply(
       `🧀 *CHEESE Cafe ga xush kelibsiz, ${tgUser.first_name}!*\n\n` +
       `Buyurtma berish va yetkazib olish uchun avval *telefon raqamingizni* yuboring.\n\n` +
-      `Bu sizning buyurtmangizni to'g'ri yetkazib berish uchun kerak 🚀`,
+      `Bu sizning buyurtmangizni tez va yetkazib berish uchun kerak 🚀`,
       {
         parse_mode: 'Markdown',
         reply_markup: new Keyboard()
@@ -90,11 +90,11 @@ bot.on('message:contact', async (ctx) => {
 // ── /menu buyrug'i ──
 bot.command('menu', async (ctx) => {
   await ctx.reply(
-    '🍽️ *CHEESE Cafe Menyu*\n\nQuyidagi tugmani bosib to\'liq menyuni ko\'ring:',
+    '🍽️ *CHEESE Cafe Menyu*',
     {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
-        .webApp('🍔 Menyuni ko\'rish', MINI_APP_URL),
+        .webApp('🍔 Menyuni ko\'rish', `${MINI_APP_URL}/user`),
     }
   )
 })
@@ -176,9 +176,8 @@ bot.command('profile', async (ctx) => {
     `Yetkazilgan buyurtmalar: ${ordersCount} ta\n\n` +
     `Profil sozlamalari uchun ilovani oching:`,
     {
-      parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
-        .webApp('👤 Profilni ochish', MINI_APP_URL),
+      .webApp('👤 Profilni ochish', `${MINI_APP_URL}/user/profile`),
     }
   )
 })
@@ -304,11 +303,13 @@ async function sendWelcomeBack(ctx: any, name: string) {
     {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
-        .webApp('🛒 Buyurtma berish', MINI_APP_URL)
+        .webApp('🛒 Buyurtma berish', `${MINI_APP_URL}/user`)
         .row()
-        .webApp('🍽️ Menyuni ko\'rish', MINI_APP_URL)
+        .webApp('🍽️ Menyu', `${MINI_APP_URL}/user`)
         .row()
-        .webApp('👤 Profilim', MINI_APP_URL),
+        .webApp('👤 Profilim', `${MINI_APP_URL}/user/profile`)
+        .row()
+        .webApp('❤️ Sevimlilar', `${MINI_APP_URL}/user/favs`),
     }
   )
 }
