@@ -1,12 +1,11 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react'
+import React, { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useUserStore } from '@/store'
 import { useColorScheme } from '@/hooks'
 import { DevSwitcher } from '@/components/ui/DevSwitcher'
-import { authAPI, menuAPI } from '@/api/client'
-import type { AppUser } from '@/types'
+import { authAPI } from '@/api/client'
 
 // User
 const Home          = lazy(() => import('@/pages/user/Home'))
@@ -33,35 +32,26 @@ const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 5*60*1000 }
 
 const Loader = () => (
   <div style={{
-    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-    height:'100vh', gap:16, background:'var(--bg)',
+    display:'flex', flexDirection:'column', alignItems:'center',
+    justifyContent:'center', height:'100vh', gap:16, background:'var(--bg)',
   }}>
     <div style={{
       width:72, height:72, borderRadius:20, background:'#F5C800',
-      display:'flex', alignItems:'center', justifyContent:'center', fontSize:36,
-      boxShadow:'0 8px 32px rgba(245,200,0,.4)',
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontSize:36, boxShadow:'0 8px 32px rgba(245,200,0,.4)',
       animation:'bounce 1.5s ease-in-out infinite',
     }}>🧀</div>
     <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:'var(--text-primary)', letterSpacing:4 }}>
       CHEESE
     </div>
-    <div style={{ fontSize:13, color:'var(--text-muted)', fontFamily:"'Plus Jakarta Sans',sans-serif", animation:'pulse 1.5s ease-in-out infinite' }}>
-      Yuklanmoqda...
-    </div>
-    <div style={{ width:100, height:3, borderRadius:2, background:'var(--border)', overflow:'hidden' }}>
-      <div style={{ height:'100%', borderRadius:2, background:'#F5C800', animation:'loadBar 1.8s ease-in-out infinite' }} />
-    </div>
     <style>{`
       @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-      @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-      @keyframes loadBar{0%{width:0%;margin-left:0}50%{width:70%;margin-left:0}100%{width:0%;margin-left:100px}}
     `}</style>
   </div>
 )
 
 function AppRoutes() {
-  const setUser  = useUserStore(s => s.setUser)
-  const user     = useUserStore(s => s.user)
+  const setUser = useUserStore(s => s.setUser)
   useColorScheme()
 
   useEffect(() => {
@@ -69,32 +59,36 @@ function AppRoutes() {
       const tg = (window as any).Telegram?.WebApp
 
       if (tg?.initData) {
-        // ── Production: backend orqali login ──
         try {
+          // Backend orqali login — token memory ga saqlanadi
           const backendUser = await authAPI.telegram(tg.initData)
+
+          // DB dan kelgan barcha ma'lumotlar — phone ham bor
           setUser({
-            telegramId:     backendUser.telegramId,
-            firstName:      backendUser.firstName,
-            lastName:       backendUser.lastName,
-            username:       backendUser.username,
-            photoUrl:       backendUser.photoUrl,
-            phone:          backendUser.phone,
-            role:           backendUser.role?.toLowerCase() || 'user',
+            telegramId:     Number(backendUser.telegramId),
+            firstName:      backendUser.firstName  || tg.initDataUnsafe?.user?.first_name || '',
+            lastName:       backendUser.lastName   || tg.initDataUnsafe?.user?.last_name,
+            username:       backendUser.username   || tg.initDataUnsafe?.user?.username,
+            photoUrl:       backendUser.photoUrl   || tg.initDataUnsafe?.user?.photo_url,
+            phone:          backendUser.phone      || undefined,
+            role:           (backendUser.role || 'USER').toLowerCase(),
             bonusPoints:    backendUser.bonusPoints || 0,
             savedPromos:    [],
             savedAddresses: [],
           })
 
           // Role ga qarab yo'naltirish
-          if (backendUser.role === 'ADMIN' || backendUser.role === 'MODERATOR') {
+          const role = backendUser.role || 'USER'
+          if (['ADMIN','MODERATOR','CASHIER'].includes(role)) {
             window.location.href = '/admin'
-          } else if (backendUser.role === 'COURIER') {
+          } else if (role === 'COURIER') {
             window.location.href = '/courier'
           }
+
         } catch (e) {
-          // Backend xato — Telegram dan olish
-          if (tg?.initDataUnsafe?.user) {
-            const tgUser = tg.initDataUnsafe.user
+          // Backend xato — Telegram dan olish (fallback)
+          const tgUser = tg?.initDataUnsafe?.user
+          if (tgUser) {
             setUser({
               telegramId:  tgUser.id,
               firstName:   tgUser.first_name,
@@ -106,13 +100,13 @@ function AppRoutes() {
               bonusPoints: 0,
               savedPromos: [], savedAddresses: [],
             })
-              }
+          }
         }
-      } else if (!user) {
-        // ── Dev fallback ──
+      } else {
+        // Dev fallback
         setUser({
-          telegramId: 123456789, firstName: 'Jasur', lastName: 'Davlatov',
-          username: 'jasur_dev', photoUrl: '', phone: '+998 90 123 45 67',
+          telegramId: 123456789, firstName: 'Otabek', lastName: 'Fayziyev',
+          username: 'otabek_RT', photoUrl: '', phone: '+998906746297',
           role: 'user', bonusPoints: 45, savedPromos: [], savedAddresses: [],
         })
       }
@@ -148,8 +142,6 @@ function AppRoutes() {
           <Route path="*" element={<Navigate to="/user" replace />} />
         </Routes>
       </Suspense>
-
-
       <DevSwitcher />
     </>
   )

@@ -134,6 +134,10 @@ export default function Profile() {
             <span>{bonusPoints} ball</span>
             <span>{nextReward ? nextReward.pointsRequired : bonusPoints} ball</span>
           </div>
+          <div className={styles.bonusInfo}>
+            <div className={styles.bonusInfoItem}>⭐ Har 10 000 so'm = 10 ball</div>
+            <div className={styles.bonusInfoItem}>🎁 10 ball = 1 000 so'm</div>
+          </div>
         </div>
 
         {/* Saved promos */}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useDebounce, useFormat, useTelegram } from '@/hooks'
+import { useDebounce, useFormat, useTelegram, useMenuItems } from '@/hooks'
 import { MENU_ITEMS, HOT_TAGS } from '@/api/mockData'
 import { AppShell, Page, SectionHeader } from '@/components/layout/AppShell'
 import { MenuCard } from '@/components/features/MenuCard'

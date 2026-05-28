@@ -91,25 +91,7 @@ export default function Home() {
   // Clock is NOT here — it scrolls away with content
   const stickyHeader = (
     <div className={styles.stickyBlock}>
-      {/* Work hours banner */}
-      <div className={clsx(styles.workBanner, !isOpen && styles.workClosed)}>
-        <div className={styles.bannerLeft}>
-          <span className={clsx(styles.bannerDot, !isOpen && styles.bannerDotRed)} />
-          <div>
-            <div className={styles.bannerText}>
-              {isOpen ? `Ochiq · ${openTime} – ${closeTime}` : `Yopiq · ${openTime} – ${closeTime}`}
-            </div>
-            <div className={styles.bannerSub}>
-              {isOpen ? 'Buyurtma berishingiz mumkin' : 'Ertaga keling!'}
-            </div>
-          </div>
-        </div>
-        <div className={styles.bannerTime}>
-          {isOpen ? `⏰ ${closeTime} gacha` : '🌙 Yopiq'}
-        </div>
-      </div>
-
-      {/* Top bar — pinned, no clock */}
+      {/* Top bar only — location + bell + profile (always visible) */}
       <div className={styles.topBar}>
         <button className={styles.locBtn} onClick={() => setShowLocModal(true)}>
           <MapPin size={16} color="#F5C800" strokeWidth={2.5} />
@@ -134,6 +116,24 @@ export default function Home() {
   return (
     <AppShell stickyHeader={stickyHeader}>
       <Page>
+        {/* Work hours — scrolls with content */}
+        <div className={clsx(styles.workBanner, !isOpen && styles.workClosed)}>
+          <div className={styles.bannerLeft}>
+            <span className={clsx(styles.bannerDot, !isOpen && styles.bannerDotRed)} />
+            <div>
+              <div className={styles.bannerText}>
+                {isOpen ? `Ochiq · ${openTime} – ${closeTime}` : `Yopiq · ${openTime} – ${closeTime}`}
+              </div>
+              <div className={styles.bannerSub}>
+                {isOpen ? 'Buyurtma berishingiz mumkin' : 'Ertaga keling!'}
+              </div>
+            </div>
+          </div>
+          <div className={styles.bannerTime}>
+            {isOpen ? `⏰ ${closeTime} gacha` : '🌙 Yopiq'}
+          </div>
+        </div>
+
         {/* Greeting */}
         <div className={styles.greeting}>
           <h1 className={styles.greetTitle}>

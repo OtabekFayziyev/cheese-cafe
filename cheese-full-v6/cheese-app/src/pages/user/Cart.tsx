@@ -99,7 +99,7 @@ export default function Cart() {
       const realOrder = await ordersAPI.create(orderData)
       setActiveOrder(realOrder)
       addToHistory(realOrder)
-      addBonusPoints(Math.floor(total() / 10000))
+      addBonusPoints(Math.floor(total() / 1000))
       clear(); haptic.success()
       confetti({ particleCount:80, spread:70, origin:{y:.5}, colors:['#F5C800','#1A1A1A'] })
       toast.success('🎉 Buyurtma berildi!', { duration: 3000 })
@@ -125,7 +125,7 @@ export default function Cart() {
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     }
     setActiveOrder(mockOrder); addToHistory(mockOrder)
-    addBonusPoints(Math.floor(total() / 10000))
+    addBonusPoints(Math.floor(total() / 1000))
     clear(); haptic.success()
     confetti({ particleCount:80, spread:70, origin:{y:.5}, colors:['#F5C800','#1A1A1A'] })
     toast.success('🎉 Buyurtma berildi!', { duration: 3000 })
@@ -286,7 +286,7 @@ export default function Cart() {
             ]).map(m => (
               <button key={m.type}
                 className={clsx(styles.payMethod, payMethod===m.type && styles.payActive)}
-                onClick={() => { haptic.light(); if(m.type!=='cash') setCashNotice(true); else setPayMethod(m.type) }}>
+                onClick={() => { haptic.light(); if(m.type!=='cash') { if(!cashNotice) setCashNotice(true) } else setPayMethod(m.type) }}>
                 <span className={styles.payIcon}>{m.icon}</span>
                 <span>{m.label}</span>
               </button>
