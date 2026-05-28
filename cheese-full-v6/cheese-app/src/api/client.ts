@@ -9,7 +9,7 @@ export const api = axios.create({
 
 // JWT tokenni har so'rovga qo'shish
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('cheese_token')
+  const token = sessionStorage.getItem('cheese_token') || localStorage.getItem('cheese_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
@@ -19,6 +19,7 @@ api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
+      sessionStorage.removeItem('cheese_token')
       localStorage.removeItem('cheese_token')
       window.location.reload()
     }
@@ -32,6 +33,7 @@ export const authAPI = {
   telegram: async (initData: string) => {
     const res = await api.post('/api/auth/telegram', { initData })
     const { token, user } = res.data.data
+    sessionStorage.setItem('cheese_token', token)
     localStorage.setItem('cheese_token', token)
     return user
   },
