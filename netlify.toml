@@ -1,7 +1,7 @@
 [build]
   base    = "cheese-full-v6/cheese-app"
   command = "npm install && npm run build"
-  publish = "cheese-full-v6/cheese-app/dist"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
