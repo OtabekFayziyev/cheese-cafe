@@ -52,6 +52,7 @@ const Loader = () => (
 
 function AppRoutes() {
   const setUser = useUserStore(s => s.setUser)
+  const [loading, setLoading] = useState(true)
   useColorScheme()
 
   useEffect(() => {
@@ -115,10 +116,13 @@ function AppRoutes() {
           role: 'user', bonusPoints: 45, savedPromos: [], savedAddresses: [],
         })
       }
+      setLoading(false)
     }
 
     init()
   }, [])
+
+  if (loading) return <Loader />
 
   return (
     <>
