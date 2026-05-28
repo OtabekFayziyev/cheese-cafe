@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { MapPin, Bell, User } from 'lucide-react'
-import { useWorkHours, useLocation, useFormat, useTelegram, useColorScheme } from '@/hooks'
+import { useWorkHours, useLocation, useFormat, useTelegram, useColorScheme, useMenuItems, useCategories } from '@/hooks'
 import { useUserStore, useOrderStore } from '@/store'
 import { MENU_ITEMS, CATEGORIES } from '@/api/mockData'
 import { AppShell, Page, SectionHeader } from '@/components/layout/AppShell'
@@ -47,9 +47,11 @@ export default function Home() {
   const [showLocModal, setShowLocModal] = useState(false)
   const [notifOpen,    setNotifOpen]    = useState(false)
 
+  const { items: allItems } = useMenuItems()
+  const { categories: allCats } = useCategories()
   const filteredMenu = activeCat === 'all'
-    ? MENU_ITEMS
-    : MENU_ITEMS.filter(m => m.categoryId === activeCat)
+    ? allItems
+    : allItems.filter((m: any) => m.categoryId === activeCat)
 
   const nextSlide = useCallback(() => setSlide(s => (s+1) % SLIDES.length), [])
 
@@ -220,7 +222,7 @@ export default function Home() {
           </button>
         } />
         <div className={styles.catsScroll}>
-          {CATEGORIES.map(cat => (
+          {allCats.map((cat: any) => (
             <button key={cat.id}
               className={clsx(styles.catPill, activeCat === cat.id && styles.catActive)}
               onClick={() => { haptic.light(); setActiveCat(cat.id) }}>

@@ -155,3 +155,5 @@ export function useColorScheme() {
   }, [colorScheme])
   return colorScheme
 }
+
+export { useMenuItems, useCategories, useCafeSettings } from './useMenu'
