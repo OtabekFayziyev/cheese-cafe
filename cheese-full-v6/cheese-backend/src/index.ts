@@ -1,3 +1,6 @@
+// BigInt JSON serialization fix
+;(BigInt.prototype as any).toJSON = function() { return this.toString() }
+
 import 'dotenv/config'
 import Fastify from 'fastify'
 import cors      from '@fastify/cors'

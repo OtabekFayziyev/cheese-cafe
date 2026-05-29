@@ -182,12 +182,12 @@ export default function OrderTracking() {
         {/* Order details */}
         <div className={styles.detailCard}>
           <div className={styles.detailTitle}>📋 Buyurtma tarkibi</div>
-          {order.items.map((item: any, idx: number) => (
+          {(order.items || []).map((item: any, idx: number) => (
             <div key={idx} className={styles.detailItem}>
               <span className={styles.detailEmoji}>{item.menuItem?.emoji || '🍔'}</span>
               <span className={styles.detailName}>{item.menuItem?.name || 'Taom'}</span>
               <span className={styles.detailQty}>×{item.quantity}</span>
-              <span className={styles.detailPrice}>{fmt(item.price)}</span>
+              <span className={styles.detailPrice}>{fmt(item.price || item.totalPrice || 0)}</span>
             </div>
           ))}
           <div className={styles.detailDivider} />

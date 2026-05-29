@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react'
+import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
@@ -7,7 +7,6 @@ import { useColorScheme } from '@/hooks'
 import { DevSwitcher } from '@/components/ui/DevSwitcher'
 import { authAPI } from '@/api/client'
 
-// User
 const Home          = lazy(() => import('@/pages/user/Home'))
 const Search        = lazy(() => import('@/pages/user/Search'))
 const Cart          = lazy(() => import('@/pages/user/Cart'))
@@ -15,14 +14,12 @@ const Favs          = lazy(() => import('@/pages/user/Favs').then(m=>({default:m
 const Profile       = lazy(() => import('@/pages/user/Profile'))
 const PizzaBuilder  = lazy(() => import('@/pages/user/PizzaBuilder'))
 const OrderTracking = lazy(() => import('@/pages/user/OrderTracking'))
-// Admin
 const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'))
 const AdminOrders    = lazy(() => import('@/pages/admin/Orders'))
 const AdminMenu      = lazy(() => import('@/pages/admin/MenuManager'))
 const AdminMonitor   = lazy(() => import('@/pages/admin/Monitoring'))
 const AdminCustomers = lazy(() => import('@/pages/admin/Customers'))
 const AdminSettings  = lazy(() => import('@/pages/admin/Settings'))
-// Courier
 const CourierTasks   = lazy(() => import('@/pages/courier/Tasks'))
 const CourierMap     = lazy(() => import('@/pages/courier/CourierMap'))
 const CourierHistory = lazy(() => import('@/pages/courier/History'))
@@ -44,14 +41,13 @@ const Loader = () => (
     <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:'var(--text-primary)', letterSpacing:4 }}>
       CHEESE
     </div>
-    <style>{`
-      @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-    `}</style>
+    <style>{`@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}`}</style>
   </div>
 )
 
 function AppRoutes() {
-  const setUser = useUserStore(s => s.setUser)
+  const setUser    = useUserStore(s => s.setUser)
+  const [loading, setLoading] = useState(true)
   useColorScheme()
 
   useEffect(() => {
@@ -60,10 +56,7 @@ function AppRoutes() {
 
       if (tg?.initData) {
         try {
-          // Backend orqali login — token memory ga saqlanadi
           const backendUser = await authAPI.telegram(tg.initData)
-
-          // DB dan kelgan barcha ma'lumotlar — phone ham bor
           setUser({
             telegramId:     Number(backendUser.telegramId),
             firstName:      backendUser.firstName  || tg.initDataUnsafe?.user?.first_name || '',
@@ -73,42 +66,27 @@ function AppRoutes() {
             phone:          backendUser.phone      || undefined,
             role:           (backendUser.role || 'USER').toLowerCase(),
             bonusPoints:    backendUser.bonusPoints || 0,
-            savedPromos:    [],
-            savedAddresses: [],
+            savedPromos:    [], savedAddresses:    [],
           })
-
-          // Role ga qarab yo'naltirish — faqat bir marta
           const role = backendUser.role || 'USER'
-          const currentPath = window.location.pathname
-          if (['ADMIN','MODERATOR','CASHIER'].includes(role)) {
-            if (!currentPath.startsWith('/admin')) {
-              window.location.href = '/admin'
-            }
-          } else if (role === 'COURIER') {
-            if (!currentPath.startsWith('/courier')) {
-              window.location.href = '/courier'
-            }
+          const path = window.location.pathname
+          if (['ADMIN','MODERATOR','CASHIER'].includes(role) && !path.startsWith('/admin')) {
+            window.location.replace('/admin')
+          } else if (role === 'COURIER' && !path.startsWith('/courier')) {
+            window.location.replace('/courier')
           }
-
-        } catch (e) {
-          // Backend xato — Telegram dan olish (fallback)
-          const tgUser = tg?.initDataUnsafe?.user
-          if (tgUser) {
+        } catch {
+          const u = tg?.initDataUnsafe?.user
+          if (u) {
             setUser({
-              telegramId:  tgUser.id,
-              firstName:   tgUser.first_name,
-              lastName:    tgUser.last_name,
-              username:    tgUser.username,
-              photoUrl:    tgUser.photo_url,
-              phone:       undefined,
-              role:        'user',
-              bonusPoints: 0,
+              telegramId: u.id, firstName: u.first_name, lastName: u.last_name,
+              username: u.username, photoUrl: u.photo_url,
+              phone: undefined, role: 'user', bonusPoints: 0,
               savedPromos: [], savedAddresses: [],
             })
           }
         }
       } else {
-        // Dev fallback
         setUser({
           telegramId: 123456789, firstName: 'Otabek', lastName: 'Fayziyev',
           username: 'otabek_RT', photoUrl: '', phone: '+998906746297',
@@ -116,9 +94,10 @@ function AppRoutes() {
         })
       }
     }
-
-    init()
+    init().finally(() => setLoading(false))
   }, [])
+
+  if (loading) return <Loader />
 
   return (
     <>
@@ -131,19 +110,16 @@ function AppRoutes() {
           <Route path="/user/profile"        element={<Profile />} />
           <Route path="/user/pizza-builder"  element={<PizzaBuilder />} />
           <Route path="/user/order-tracking" element={<OrderTracking />} />
-
-          <Route path="/admin"              element={<AdminDashboard />} />
-          <Route path="/admin/orders"       element={<AdminOrders />} />
-          <Route path="/admin/menu"         element={<AdminMenu />} />
-          <Route path="/admin/monitoring"   element={<AdminMonitor />} />
-          <Route path="/admin/customers"    element={<AdminCustomers />} />
-          <Route path="/admin/settings"     element={<AdminSettings />} />
-
-          <Route path="/courier"            element={<CourierTasks />} />
-          <Route path="/courier/map"        element={<CourierMap />} />
-          <Route path="/courier/history"    element={<CourierHistory />} />
-          <Route path="/courier/profile"    element={<CourierProfile />} />
-
+          <Route path="/admin"               element={<AdminDashboard />} />
+          <Route path="/admin/orders"        element={<AdminOrders />} />
+          <Route path="/admin/menu"          element={<AdminMenu />} />
+          <Route path="/admin/monitoring"    element={<AdminMonitor />} />
+          <Route path="/admin/customers"     element={<AdminCustomers />} />
+          <Route path="/admin/settings"      element={<AdminSettings />} />
+          <Route path="/courier"             element={<CourierTasks />} />
+          <Route path="/courier/map"         element={<CourierMap />} />
+          <Route path="/courier/history"     element={<CourierHistory />} />
+          <Route path="/courier/profile"     element={<CourierProfile />} />
           <Route path="*" element={<Navigate to="/user" replace />} />
         </Routes>
       </Suspense>

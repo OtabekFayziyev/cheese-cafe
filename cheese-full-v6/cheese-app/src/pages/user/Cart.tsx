@@ -84,8 +84,9 @@ export default function Cart() {
         items: items.map(i => ({
           menuItemId: i.menuItem.id,
           quantity:   i.quantity,
-          extraIds:   i.selectedExtras.map((e: any) => e.id),
-          note:       i.note,
+          extraIds:   (i.selectedExtras || []).map((e: any) => e.id),
+          note:       i.note || '',
+          price:      i.totalPrice,
         })),
         deliveryType: deliveryType.toUpperCase(),
         paymentType:  payMethod.toUpperCase(),

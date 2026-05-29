@@ -156,15 +156,16 @@ export default function Orders() {
     updateOrderStatus(order.id, next)
   }
 
-  const handleCourierAssign = (courierId: number) => {
+  const handleCourierAssign = async (courierId: number) => {
     if (!courierModal) return
     haptic.success()
+    try {
+      await ordersAPI.adminUpdateStatus(courierModal.id, 'ON_THE_WAY', { courierId })
+      await fetchOrders()
+    } catch (e) {}
     assignCourier(courierModal.id, courierId)
     const c = MOCK_COURIERS.find(c=>c.id===courierId)
-    // Notify courier immediately
-    toast.success(`🛵 ${c?.name} tayinlandi! Kuryerga xabar ketdi.`)
-    // Show courier info toast
-    setTimeout(() => toast(`📞 ${c?.name}: ${c?.phone}`, { duration: 4000, icon: '🛵' }), 500)
+    toast.success(`🛵 ${c?.name || 'Kuryer'} tayinlandi!`)
     setCourierModal(null)
   }
 
