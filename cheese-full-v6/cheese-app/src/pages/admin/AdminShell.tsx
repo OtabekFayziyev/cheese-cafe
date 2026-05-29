@@ -5,7 +5,9 @@ import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed,
   TrendingUp, Users, Settings, Power
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAdminStore } from '@/store/adminStore'
+import { ordersAPI } from '@/api/client'
 import { useTelegram } from '@/hooks'
 import styles from './AdminShell.module.css'
 

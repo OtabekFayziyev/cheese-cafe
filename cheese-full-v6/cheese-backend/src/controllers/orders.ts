@@ -1,10 +1,14 @@
+// BigInt JSON serialization fix
+;(BigInt.prototype as any).toJSON = function() { return this.toString() }
+
 import type { FastifyRequest, FastifyReply } from 'fastify'
-import { prisma } from '../utils/db'
+import { prisma }    from '../utils/db'
 import { ok, err, paginate } from '../types/index'
 import { generateOrderNumber, calcBonusPoints } from '../utils/helpers'
 import type { OrderStatus } from '@prisma/client'
+import { notifyAdminNewOrder, notifyUserOrderStatus, bot } from '../bot/index'
 
-// POST /api/orders — yangi buyurtma yaratish
+// ── POST /api/orders ──
 export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
   const userId = (req as any).user.userId
   const body   = req.body as any
@@ -16,14 +20,11 @@ export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
     promoCode, note,
   } = body
 
-  // Taomlarni tekshirish
   if (!items?.length) return reply.code(400).send(err('Savat bo\'sh'))
 
-  // Narxlarni DB dan olish (frontend narxiga ishonmaslik)
   let subtotal    = 0
   let deliveryFee = deliveryType === 'PICKUP' ? 0 : 5000
   let discount    = 0
-
   const orderItems: any[] = []
 
   for (const item of items) {
@@ -56,7 +57,6 @@ export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
     })
   }
 
-  // Promo kod tekshirish
   if (promoCode) {
     const promo = await prisma.promoCode.findFirst({
       where: {
@@ -68,12 +68,10 @@ export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
         ],
       },
     })
-
     if (promo && subtotal >= promo.minOrder) {
       discount = promo.discountType === 'FIXED'
         ? promo.discount
         : Math.floor(subtotal * promo.discount / 100)
-      // Use count++
       await prisma.promoCode.update({
         where: { id: promo.id },
         data:  { usedCount: { increment: 1 } },
@@ -81,7 +79,7 @@ export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
     }
   }
 
-  const totalPrice = subtotal + deliveryFee - discount
+  const totalPrice  = subtotal + deliveryFee - discount
   const orderNumber = await generateOrderNumber(prisma)
 
   const order = await prisma.order.create({
@@ -99,11 +97,11 @@ export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
     },
     include: {
       items: { include: { menuItem: true, extras: { include: { extra: true } } } },
-      user:  { select: { firstName: true, phone: true } },
+      user:  { select: { firstName: true, phone: true, telegramId: true } },
     },
   })
 
-  // Bonus ball qo'shish
+  // Bonus ball
   const bonusPoints = calcBonusPoints(totalPrice)
   if (bonusPoints > 0) {
     await prisma.user.update({
@@ -112,10 +110,13 @@ export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
     })
   }
 
+  // Admin ga xabar (async — javobni kechiktirmasin)
+  notifyAdminNewOrder(order).catch(console.error)
+
   return reply.code(201).send(ok(order, `Buyurtma qabul qilindi! +${bonusPoints} ball`))
 }
 
-// GET /api/orders — foydalanuvchi buyurtmalari
+// ── GET /api/orders ──
 export async function getUserOrders(req: FastifyRequest, reply: FastifyReply) {
   const userId = (req as any).user.userId
   const { page, limit } = req.query as any
@@ -134,11 +135,11 @@ export async function getUserOrders(req: FastifyRequest, reply: FastifyReply) {
   return reply.send(ok({ orders, total, page: Number(page) || 1, limit: take }))
 }
 
-// GET /api/orders/:id — bitta buyurtma
+// ── GET /api/orders/:id ──
 export async function getOrder(req: FastifyRequest, reply: FastifyReply) {
-  const { id }   = req.params as { id: string }
-  const userId   = (req as any).user.userId
-  const role     = (req as any).user.role
+  const { id } = req.params as { id: string }
+  const userId = (req as any).user.userId
+  const role   = (req as any).user.role
 
   const order = await prisma.order.findUnique({
     where:   { id },
@@ -157,7 +158,7 @@ export async function getOrder(req: FastifyRequest, reply: FastifyReply) {
   return reply.send(ok(order))
 }
 
-// ── ADMIN: GET /api/admin/orders ──
+// ── GET /api/admin/orders ──
 export async function getAdminOrders(req: FastifyRequest, reply: FastifyReply) {
   const { status, page, limit, search } = req.query as any
   const { take, skip } = paginate(page, limit)
@@ -176,7 +177,7 @@ export async function getAdminOrders(req: FastifyRequest, reply: FastifyReply) {
       where,
       include: {
         items:   { include: { menuItem: true } },
-        user:    { select: { firstName: true, lastName: true, phone: true, telegramId: true } },
+        user:    { select: { firstName: true, lastName: true, username: true, phone: true, telegramId: true } },
         courier: { select: { firstName: true, phone: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -185,22 +186,19 @@ export async function getAdminOrders(req: FastifyRequest, reply: FastifyReply) {
     prisma.order.count({ where }),
   ])
 
-  // BigInt → String (JSON serialization fix)
-  const serialized = orders.map((o: any) => ({
-    ...o,
-    user: o.user ? { ...o.user, telegramId: String(o.user.telegramId) } : null,
-  }))
-
-  return reply.send(ok({ orders: serialized, total, page: Number(page) || 1, limit: take }))
+  return reply.send(ok({ orders, total, page: Number(page) || 1, limit: take }))
 }
 
-// PATCH /api/admin/orders/:id/status — status o'zgartirish
+// ── PATCH /api/admin/orders/:id/status ──
 export async function updateOrderStatus(req: FastifyRequest, reply: FastifyReply) {
   const { id }     = req.params as { id: string }
   const { status, courierId, cancelReason } = req.body as any
   const adminUser  = (req as any).user
 
-  const order = await prisma.order.findUnique({ where: { id } })
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { user: { select: { telegramId: true, firstName: true } } },
+  })
   if (!order) return reply.code(404).send(err('Buyurtma topilmadi'))
 
   const statusUpper = status.toUpperCase() as OrderStatus
@@ -211,7 +209,7 @@ export async function updateOrderStatus(req: FastifyRequest, reply: FastifyReply
   if (statusUpper === 'ON_THE_WAY') timestamps.pickedAt    = new Date()
   if (statusUpper === 'DELIVERED')  timestamps.deliveredAt = new Date()
   if (statusUpper === 'CANCELLED')  {
-    timestamps.cancelledAt = new Date()
+    timestamps.cancelledAt  = new Date()
     timestamps.cancelReason = cancelReason || 'Admin tomonidan'
   }
 
@@ -224,7 +222,7 @@ export async function updateOrderStatus(req: FastifyRequest, reply: FastifyReply
     },
     include: {
       items:   { include: { menuItem: true } },
-      user:    { select: { firstName: true, telegramId: true } },
+      user:    { select: { firstName: true, lastName: true, username: true, phone: true, telegramId: true } },
       courier: { select: { firstName: true, phone: true } },
     },
   })
@@ -232,24 +230,29 @@ export async function updateOrderStatus(req: FastifyRequest, reply: FastifyReply
   // Audit log
   await prisma.auditLog.create({
     data: {
-      adminId: adminUser.userId,
-      action:  `Buyurtma statusi o'zgartirildi: ${order.status} → ${statusUpper}`,
-      entity:  'order',
+      adminId:  adminUser.userId,
+      action:   `Buyurtma statusi: ${order.status} → ${statusUpper}`,
+      entity:   'order',
       entityId: id,
       oldValue: order.status,
       newValue: statusUpper,
     },
   })
 
-  // BigInt fix
-  const result = {
-    ...updated,
-    user: updated.user ? { ...updated.user, telegramId: String((updated.user as any).telegramId) } : null,
+  // Userga bot orqali xabar
+  if (order.user?.telegramId) {
+    notifyUserOrderStatus(
+      order.user.telegramId,
+      order.orderNumber,
+      statusUpper,
+      cancelReason
+    ).catch(console.error)
   }
-  return reply.send(ok(result))
+
+  return reply.send(ok(updated))
 }
 
-// ── COURIER: GET /api/courier/orders ──
+// ── GET /api/courier/orders ──
 export async function getCourierOrders(req: FastifyRequest, reply: FastifyReply) {
   const courierId = (req as any).user.userId
 
@@ -262,13 +265,16 @@ export async function getCourierOrders(req: FastifyRequest, reply: FastifyReply)
   return reply.send(ok(orders))
 }
 
-// PATCH /api/courier/orders/:id/status
+// ── PATCH /api/courier/orders/:id/status ──
 export async function updateCourierOrderStatus(req: FastifyRequest, reply: FastifyReply) {
   const { id }     = req.params as { id: string }
   const { status } = req.body as { status: string }
   const courierId  = (req as any).user.userId
 
-  const order = await prisma.order.findFirst({ where: { id, courierId } })
+  const order = await prisma.order.findFirst({
+    where: { id, courierId },
+    include: { user: { select: { telegramId: true } } },
+  })
   if (!order) return reply.code(404).send(err('Buyurtma topilmadi'))
 
   const allowed = ['ON_THE_WAY', 'DELIVERED']
@@ -283,6 +289,12 @@ export async function updateCourierOrderStatus(req: FastifyRequest, reply: Fasti
       ...(status.toUpperCase() === 'DELIVERED' && { deliveredAt: new Date() }),
     },
   })
+
+  // Userga xabar
+  if (order.user?.telegramId) {
+    notifyUserOrderStatus(order.user.telegramId, order.orderNumber, status.toUpperCase())
+      .catch(console.error)
+  }
 
   return reply.send(ok(updated))
 }

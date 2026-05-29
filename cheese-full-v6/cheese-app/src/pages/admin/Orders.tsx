@@ -1,64 +1,27 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import clsx from 'clsx'
+import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import clsx from 'clsx'
 import { useAdminStore, ORDER_STATUS_LABELS, ORDER_STATUS_NEXT, MOCK_COURIERS, STATUS_COLORS } from '@/store/adminStore'
 import { ordersAPI } from '@/api/client'
-import { useFormat, useTelegram } from '@/hooks'
 import { AdminShell, AdminPageHeader } from './AdminShell'
+import { useFormat, useTelegram } from '@/hooks'
 import type { Order, OrderStatus } from '@/types'
 import styles from './Orders.module.css'
 
-// ── Elapsed time helper ──
-function useElapsed(createdAt: string) {
-  const [elapsed, setElapsed] = useState('')
+function useElapsed(date?: string) {
+  const [e, setE] = useState('')
   useEffect(() => {
+    if (!date) return
     const calc = () => {
-      const diff = Date.now() - new Date(createdAt).getTime()
-      const mins = Math.floor(diff / 60000)
-      const hrs  = Math.floor(mins / 60)
-      const secs = Math.floor((diff % 60000) / 1000)
-      if (hrs > 0) setElapsed(`${hrs}s ${mins % 60}d`)
-      else if (mins > 0) setElapsed(`${mins}d ${secs}s`)
-      else setElapsed(`${secs}s`)
+      const diff = Date.now() - new Date(date).getTime()
+      const m = Math.floor(diff/60000)
+      setE(m > 59 ? `${Math.floor(m/60)}s ${m%60}d` : m > 0 ? `${m}d` : 'Hozir')
     }
-    calc()
-    const t = setInterval(calc, 1000)
-    return () => clearInterval(t)
-  }, [createdAt])
-  return elapsed
+    calc(); const t = setInterval(calc, 10000); return () => clearInterval(t)
+  }, [date])
+  return e
 }
-
-// ── Sound bell ──
-function playBell() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    // Ding-ding pattern
-    const play = (freq: number, start: number, dur: number) => {
-      const osc  = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.type = 'sine'; osc.frequency.value = freq
-      gain.gain.setValueAtTime(0, ctx.currentTime + start)
-      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + start + 0.01)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur)
-      osc.start(ctx.currentTime + start)
-      osc.stop(ctx.currentTime + start + dur)
-    }
-    play(880, 0, 0.4); play(1100, 0.15, 0.35); play(880, 0.45, 0.5); play(1100, 0.6, 0.4)
-  } catch(e) {}
-}
-
-const FILTER_TABS: {key: OrderStatus|'all'; label:string}[] = [
-  {key:'all',       label:'Barchasi'},
-  {key:'pending',   label:'🔔 Yangi'},
-  {key:'accepted',  label:'✅ Qabul'},
-  {key:'preparing', label:'👨‍🍳 Tayyor'},
-  {key:'ready',     label:'📦 Tayyor'},
-  {key:'on_the_way',label:'🛵 Yo\'lda'},
-  {key:'delivered', label:'✅ Yetdi'},
-  {key:'cancelled', label:'❌ Bekor'},
-]
 
 export default function Orders() {
   const { haptic }   = useTelegram()
@@ -67,25 +30,29 @@ export default function Orders() {
 
   const [searchParams] = useSearchParams()
   const initialStatus = (searchParams.get('status') || 'all') as OrderStatus | 'all'
-  const [filter, setFilter]               = useState<OrderStatus|'all'>(initialStatus)
-  const [detailOrder, setDetailOrder]     = useState<Order|null>(null)
-  const [cancelTarget, setCancelTarget]   = useState<Order|null>(null)
-  const [courierModal, setCourierModal]   = useState<Order|null>(null)
-  const [newOrderPopup, setNewOrderPopup] = useState<Order|null>(null)
-  const [search, setSearch] = useState('')
+  const [filter, setFilter]             = useState<OrderStatus|'all'>(initialStatus)
+  const [detailOrder, setDetailOrder]   = useState<Order|null>(null)
+  const [cancelTarget, setCancelTarget] = useState<Order|null>(null)
+  const [courierModal, setCourierModal] = useState<Order|null>(null)
+  const [search, setSearch]             = useState('')
 
-  // ── Real API orders ──
-  const [realOrders, setRealOrders] = useState<Order[]>([])
-  const [loading, setLoading]       = useState(true)
+  // Real API state
+  const [orders, setOrders]   = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const prevCountRef = useRef(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
-      const data = await ordersAPI.adminGetAll({ limit: 100 })
-      const mapped = (data.orders || []).map((o: any) => ({
+      const data = await ordersAPI.adminGetAll({ limit: 200 })
+      const raw = data.orders || data || []
+      const mapped: Order[] = raw.map((o: any) => ({
         ...o,
-        status:       o.status.toLowerCase() as OrderStatus,
-        deliveryType: o.deliveryType?.toLowerCase(),
-        paymentType:  o.paymentType?.toLowerCase(),
+        status:       (o.status || 'pending').toLowerCase() as OrderStatus,
+        deliveryType: (o.deliveryType || 'delivery').toLowerCase(),
+        paymentType:  (o.paymentType  || 'cash').toLowerCase(),
+        customerName: o.user ? `${o.user.firstName || ''} ${o.user.lastName || ''}`.trim() : 'Noma\'lum',
+        customerUsername: o.user?.username,
         items: (o.items || []).map((i: any) => ({
           ...i,
           menuItem: i.menuItem || { id: i.menuItemId, name: 'Taom', emoji: '🍔', price: i.price },
@@ -93,53 +60,28 @@ export default function Orders() {
           totalPrice: i.price,
         })),
       }))
-      setRealOrders(mapped)
-    } catch (e) {
-      // fallback to mock
-      setRealOrders(mockOrders)
+      
+      // New order notification
+      const pendingCount = mapped.filter(o => o.status === 'pending').length
+      if (prevCountRef.current > 0 && pendingCount > prevCountRef.current) {
+        const diff = pendingCount - prevCountRef.current
+        toast.success(`🔔 ${diff} ta yangi buyurtma!`, { duration: 5000 })
+        haptic.medium()
+      }
+      prevCountRef.current = pendingCount
+      setOrders(mapped)
+    } catch {
+      if (orders.length === 0) setOrders(mockOrders as any)
     } finally {
       setLoading(false)
     }
-  }
+  }, [mockOrders])
 
   useEffect(() => {
     fetchOrders()
-    const interval = setInterval(fetchOrders, 15000) // every 15s
-    return () => clearInterval(interval)
-  }, [])
-
-  const orders = realOrders.length > 0 ? realOrders : mockOrders
-  const prevPendingRef = useRef(orders.filter(o=>o.status==='pending').length)
-
-  // ── Auto-detect new orders + sound ──
-  useEffect(() => {
-    const pending = orders.filter(o=>o.status==='pending').length
-    if (pending > prevPendingRef.current) {
-      const newest = orders.filter(o=>o.status==='pending')
-        .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
-      playBell()
-      setNewOrderPopup(newest)
-      haptic.heavy()
-      setTimeout(() => setNewOrderPopup(null), 6000)
-    }
-    prevPendingRef.current = pending
-  }, [orders])
-
-  // ── Simulate new order for demo (every 30s) ──
-  useEffect(() => {
-    const t = setTimeout(() => {
-      // In production this comes from Socket.io
-    }, 30000)
-    return () => clearTimeout(t)
-  }, [])
-
-  const filtered = [...orders]
-    .filter(o => {
-      const matchStatus = filter==='all' || o.status===filter
-      const matchSearch = !search || o.id.includes(search) || (o as any).customerName?.toLowerCase().includes(search.toLowerCase())
-      return matchStatus && matchSearch
-    })
-    .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    const t = setInterval(fetchOrders, 3000) // 3 soniyada bir
+    return () => clearInterval(t)
+  }, [fetchOrders])
 
   const handleNext = async (order: Order) => {
     const next = ORDER_STATUS_NEXT[order.status]
@@ -150,8 +92,8 @@ export default function Orders() {
       await ordersAPI.adminUpdateStatus(order.id, next.toUpperCase())
       toast.success(`✅ ${ORDER_STATUS_LABELS[next]}`)
       await fetchOrders()
-    } catch (e) {
-      toast.error('Status yangilanmadi')
+    } catch {
+      toast.error('Xato yuz berdi')
     }
     updateOrderStatus(order.id, next)
   }
@@ -162,7 +104,7 @@ export default function Orders() {
     try {
       await ordersAPI.adminUpdateStatus(courierModal.id, 'ON_THE_WAY', { courierId })
       await fetchOrders()
-    } catch (e) {}
+    } catch {}
     assignCourier(courierModal.id, courierId)
     const c = MOCK_COURIERS.find(c=>c.id===courierId)
     toast.success(`🛵 ${c?.name || 'Kuryer'} tayinlandi!`)
@@ -175,134 +117,119 @@ export default function Orders() {
     try {
       await ordersAPI.adminUpdateStatus(cancelTarget.id, 'CANCELLED')
       await fetchOrders()
-    } catch (e) {}
+    } catch {}
     cancelOrder(cancelTarget.id)
-    toast.error(`❌ Buyurtma bekor qilindi`)
+    toast.error('❌ Buyurtma bekor qilindi')
     setCancelTarget(null)
     if (detailOrder?.id === cancelTarget.id) setDetailOrder(null)
+  }
+
+  const displayOrders = orders.length > 0 ? orders : (mockOrders as any)
+  
+  const filtered = displayOrders.filter((o: Order) => {
+    const matchStatus = filter === 'all' || o.status === filter
+    const matchSearch = !search ||
+      o.id.toLowerCase().includes(search.toLowerCase()) ||
+      (o as any).customerName?.toLowerCase().includes(search.toLowerCase()) ||
+      o.phone?.includes(search)
+    return matchStatus && matchSearch
+  })
+
+  const pendingCount = displayOrders.filter((o: Order) => o.status === 'pending').length
+  const activeCount  = displayOrders.filter((o: Order) => 
+    !['delivered','cancelled'].includes(o.status)).length
+
+  const STATUS_FILTERS: (OrderStatus|'all')[] = ['all','pending','accepted','preparing','ready','on_the_way','delivered','cancelled']
+  const STATUS_LABELS: Record<string, string> = {
+    all:'Barchasi', pending:'Yangi', accepted:'Qabul', preparing:'Tayyorlanmoqda',
+    ready:'Tayyor', on_the_way:"Yo'lda", delivered:'Yetkazildi', cancelled:'Bekor'
   }
 
   return (
     <AdminShell>
       <AdminPageHeader
         title="Buyurtmalar"
-        subtitle={`${orders.length} ta jami · ${orders.filter(o=>o.status==='pending').length} ta yangi`}
+        subtitle={`${displayOrders.length} ta jami · ${pendingCount} ta yangi`}
       />
 
       {/* Search */}
-      <div className={styles.searchRow}>
-        <div className={styles.searchWrap}>
-          <span className={styles.searchIcon}>🔍</span>
-          <input className={styles.searchInput} placeholder="ID yoki mijoz ismi..."
-            value={search} onChange={e=>setSearch(e.target.value)} />
-        </div>
+      <div className={styles.searchWrap}>
+        <input className={styles.searchInput}
+          placeholder="ID yoki mijoz ismi..."
+          value={search} onChange={e => setSearch(e.target.value)} />
+        {loading && <div className={styles.loadingDot} />}
       </div>
 
-      {/* Filter tabs */}
-      <div className={styles.filterTabs}>
-        {FILTER_TABS.map(tab => {
-          const count = tab.key==='all' ? orders.length : orders.filter(o=>o.status===tab.key).length
+      {/* Filters */}
+      <div className={styles.filters}>
+        {STATUS_FILTERS.map(s => {
+          const cnt = s === 'all' ? displayOrders.length 
+            : displayOrders.filter((o: Order) => o.status === s).length
+          if (cnt === 0 && s !== 'all' && s !== 'pending') return null
           return (
-            <button key={tab.key}
-              className={clsx(styles.filterTab, filter===tab.key && styles.filterTabActive)}
-              onClick={() => { haptic.light(); setFilter(tab.key) }}
-            >
-              {tab.label}
-              {count > 0 && <span className={styles.filterCount}>{count}</span>}
+            <button key={s}
+              className={clsx(styles.filterBtn, filter === s && styles.filterActive,
+                s === 'pending' && cnt > 0 && styles.filterPending)}
+              onClick={() => setFilter(s)}>
+              {s === 'pending' && cnt > 0 && <span className={styles.filterDot} />}
+              {STATUS_LABELS[s]}
+              {cnt > 0 && <span className={styles.filterCount}>{cnt}</span>}
             </button>
           )
         })}
       </div>
 
-      {/* Orders */}
-      <div className={styles.orderList}>
-        {filtered.length === 0 && (
-          <div className={styles.empty}><div>📭</div><div>Buyurtma topilmadi</div></div>
-        )}
-        {filtered.map((order, idx) => (
-          <OrderCard
-            key={order.id}
-            order={order}
-            idx={idx}
-            fmt={fmt}
+      {/* Orders list */}
+      <div className={styles.list}>
+        {filtered.length === 0 ? (
+          <div className={styles.empty}>
+            <div style={{fontSize:48,marginBottom:12}}>📭</div>
+            <div>Buyurtma topilmadi</div>
+          </div>
+        ) : filtered.map((order: Order) => (
+          <OrderCard key={order.id} order={order} fmt={fmt}
             onDetail={() => { haptic.light(); setDetailOrder(order) }}
             onNext={() => handleNext(order)}
-            onCancel={() => { haptic.light(); setCancelTarget(order) }}
+            onCancel={() => setCancelTarget(order)}
           />
         ))}
       </div>
 
-      {/* ── NEW ORDER POPUP ── */}
-      {newOrderPopup && (
-        <div className={styles.newOrderPopup}>
-          <div className={styles.newOrderInner}>
-            <div className={styles.newOrderIcon}>🔔</div>
-            <div className={styles.newOrderText}>
-              <div className={styles.newOrderTitle}>Yangi buyurtma!</div>
-              <div className={styles.newOrderSub}>{newOrderPopup.id} · {fmt((newOrderPopup as any).totalPrice)}</div>
-            </div>
-            <button className={styles.newOrderBtn}
-              onClick={() => { setDetailOrder(newOrderPopup); setNewOrderPopup(null) }}>
-              Ko'rish
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── DETAIL MODAL ── */}
+      {/* Detail modal */}
       {detailOrder && (
         <OrderDetailModal
-          order={detailOrder}
-          fmt={fmt}
+          order={detailOrder} fmt={fmt}
           onClose={() => setDetailOrder(null)}
           onNext={() => { handleNext(detailOrder); setDetailOrder(null) }}
           onCancel={() => { setCancelTarget(detailOrder); setDetailOrder(null) }}
         />
       )}
 
-      {/* ── CANCEL CONFIRM ── */}
+      {/* Cancel confirm */}
       {cancelTarget && (
         <div className={styles.overlay} onClick={() => setCancelTarget(null)}>
-          <div className={styles.confirmCard} onClick={e=>e.stopPropagation()}>
-            <div className={styles.confirmIcon}>⚠️</div>
-            <div className={styles.confirmTitle}>Bekor qilinsinmi?</div>
-            <div className={styles.confirmSub}>
-              <strong>{cancelTarget.id}</strong> buyurtma bekor qilinadi.<br/>
-              Bu amalni qaytarib bo'lmaydi.
-            </div>
-            <div className={styles.confirmBtns}>
-              <button className={styles.confirmNo} onClick={() => setCancelTarget(null)}>
-                Yo'q, qaytish
-              </button>
-              <button className={styles.confirmYes} onClick={confirmCancel}>
-                Ha, bekor qil
-              </button>
+          <div className={styles.confirmCard} onClick={e => e.stopPropagation()}>
+            <div style={{fontSize:48,marginBottom:12}}>❌</div>
+            <h3 className={styles.confirmTitle}>Bekor qilinsinmi?</h3>
+            <p className={styles.confirmSub}>{cancelTarget.id}</p>
+            <div style={{display:'flex',gap:8,marginTop:16}}>
+              <button className={styles.confirmNo} onClick={() => setCancelTarget(null)}>Yo'q</button>
+              <button className={styles.confirmYes} onClick={confirmCancel}>Ha, bekor qil</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── COURIER MODAL ── */}
+      {/* Courier modal */}
       {courierModal && (
         <div className={styles.overlay} onClick={() => setCourierModal(null)}>
-          <div className={styles.sheet} onClick={e=>e.stopPropagation()}>
-            <div className={styles.sheetHandle} />
-            <h3 className={styles.sheetTitle}>🛵 Kuryer tayinlash</h3>
-            <div className={styles.sheetSub}>{courierModal.id} · {courierModal.address}</div>
+          <div className={styles.courierCard} onClick={e => e.stopPropagation()}>
+            <h3 className={styles.confirmTitle}>🛵 Kuryer tanlash</h3>
             {MOCK_COURIERS.map(c => (
-              <button key={c.id}
-                className={clsx(styles.courierRow, !c.active && styles.courierBusy)}
-                onClick={() => c.active && handleCourierAssign(c.id)}
-                disabled={!c.active}
-              >
-                <div className={styles.courierAva}>🚴</div>
-                <div className={styles.courierInfo}>
-                  <div className={styles.courierName}>{c.name}</div>
-                  <div className={styles.courierMeta}>⭐{c.rating} · {c.deliveries} ta · {c.phone}</div>
-                </div>
-                <span className={clsx(styles.courierBadge, c.active ? styles.courierFree : styles.courierBusyBadge)}>
-                  {c.active ? 'Bo\'sh' : 'Band'}
-                </span>
+              <button key={c.id} className={styles.courierItem}
+                onClick={() => handleCourierAssign(c.id)}>
+                <span>🛵 {c.name}</span>
+                <span className={styles.courierPhone}>{c.phone}</span>
               </button>
             ))}
           </div>
@@ -312,66 +239,49 @@ export default function Orders() {
   )
 }
 
-// ── Order card ──
-function OrderCard({ order, idx, fmt, onDetail, onNext, onCancel }: any) {
-  const elapsed   = useElapsed(order.createdAt)
-  const col       = STATUS_COLORS[order.status]
-  const next      = ORDER_STATUS_NEXT[order.status]
-  const isNew     = order.status === 'pending'
-  const isUrgent  = isNew && (Date.now() - new Date(order.createdAt).getTime()) > 5 * 60000
+// ── Order Card ──
+function OrderCard({ order, fmt, onDetail, onNext, onCancel }: any) {
+  const elapsed = useElapsed(order.createdAt)
+  const col     = STATUS_COLORS[order.status] || { bg:'#f0f0f0', text:'#666' }
+  const next    = ORDER_STATUS_NEXT[order.status]
 
   return (
-    <div
-      className={clsx(styles.orderCard, isNew && styles.orderCardNew, isUrgent && styles.orderCardUrgent)}
-      style={{ animationDelay:`${idx*.04}s` }}
-    >
-      <div className={styles.cardHeader} onClick={onDetail}>
-        <div className={styles.cardId}>
-          {order.id}
-          {isNew && <span className={styles.newDot} />}
+    <div className={clsx(styles.card, order.status === 'pending' && styles.cardNew)}
+      onClick={onDetail}>
+      <div className={styles.cardTop}>
+        <div>
+          <div className={styles.cardId}>{order.orderNumber || order.id}</div>
+          <div className={styles.cardTime}>⏱ {elapsed}</div>
         </div>
-        <div className={styles.cardElapsed} style={{ color: isUrgent ? '#EF4444' : undefined }}>
-          ⏱ {elapsed}
-        </div>
-        <div className={styles.cardStatus} style={{ background:col.bg, color:col.text }}>
-          {ORDER_STATUS_LABELS[order.status]}
+        <div className={styles.cardStatus} style={{ background: col.bg, color: col.text }}>
+          {ORDER_STATUS_LABELS[order.status] || order.status}
         </div>
       </div>
 
-      <div className={styles.cardItems} onClick={onDetail}>
-        {order.items.slice(0,2).map((item: any) => (
-          <div key={item.id} className={styles.cardItem}>
-            <span>{item.menuItem.emoji}</span>
-            <span className={styles.cardItemName}>{item.menuItem.name}</span>
-            <span className={styles.cardItemQty}>×{item.quantity}</span>
-            <span className={styles.cardItemPrice}>{fmt(item.price)}</span>
-          </div>
-        ))}
-        {order.items.length > 2 && (
-          <div className={styles.cardMoreItems}>+{order.items.length-2} ta yana</div>
-        )}
-      </div>
-
-      <div className={styles.cardMeta} onClick={onDetail}>
-        <span>{order.deliveryType==='pickup'?'🏃 Olib ketish':`🛵 ${order.address?.slice(0,22)}...`}</span>
+      <div className={styles.cardMeta}>
+        <span>👤 {(order as any).customerName || 'Mijoz'}</span>
         <span>📞 {order.phone}</span>
       </div>
 
-      <div className={styles.cardFooter}>
+      <div className={styles.cardItems}>
+        {(order.items || []).slice(0,3).map((i: any, idx: number) => (
+          <span key={idx}>{i.menuItem?.emoji || '🍔'} {i.menuItem?.name}</span>
+        ))}
+        {(order.items || []).length > 3 && <span>+{order.items.length-3} ta</span>}
+      </div>
+
+      <div className={styles.cardBottom}>
         <div className={styles.cardTotal}>{fmt(order.totalPrice)}</div>
-        <div className={styles.cardActions}>
-          <button className={styles.detailBtn} onClick={onDetail}>🔍</button>
-          {order.status !== 'cancelled' && order.status !== 'delivered' && (
-            <button className={styles.cancelBtn} onClick={onCancel}>✕</button>
-          )}
-          {next && order.status !== 'cancelled' && (
-            <button className={clsx(styles.nextBtn, isNew && styles.nextBtnNew)} onClick={onNext}>
-              {next==='accepted'  ? '✅ Qabul' :
-               next==='preparing' ? '👨‍🍳 Boshlash' :
-               next==='ready'     ? '📦 Tayyor' :
-               next==='on_the_way'? '🛵 Kuryerga' :
-               next==='delivered' ? '✅ Yetdi' : ORDER_STATUS_LABELS[next]}
-            </button>
+        <div className={styles.cardActions} onClick={e => e.stopPropagation()}>
+          {order.status !== 'delivered' && order.status !== 'cancelled' && (
+            <>
+              <button className={styles.cancelBtn} onClick={onCancel}>✕</button>
+              {next && (
+                <button className={styles.nextBtn} onClick={onNext}>
+                  {ORDER_STATUS_LABELS[next]} →
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -379,31 +289,33 @@ function OrderCard({ order, idx, fmt, onDetail, onNext, onCancel }: any) {
   )
 }
 
-// ── Order detail modal ──
+// ── Order Detail Modal ──
 function OrderDetailModal({ order, fmt, onClose, onNext, onCancel }: any) {
-  const elapsed = useElapsed(order.createdAt)
-  const col     = STATUS_COLORS[order.status]
-  const next    = ORDER_STATUS_NEXT[order.status]
+  const elapsed = useElapsed(order?.createdAt)
+  if (!order) return null
 
-  const createdTime = new Date(order.createdAt).toLocaleString('uz-UZ', {
+  const col  = STATUS_COLORS[order.status] || { bg:'#f0f0f0', text:'#666' }
+  const next = ORDER_STATUS_NEXT[order.status]
+
+  const createdTime = order.createdAt ? new Date(order.createdAt).toLocaleString('uz-UZ', {
     day:'2-digit', month:'2-digit', year:'numeric',
-    hour:'2-digit', minute:'2-digit', second:'2-digit',
-  })
+    hour:'2-digit', minute:'2-digit',
+  }) : ''
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.detailSheet} onClick={e=>e.stopPropagation()}>
+      <div className={styles.detailSheet} onClick={e => e.stopPropagation()}>
         <div className={styles.sheetHandle} />
 
         {/* Header */}
         <div className={styles.detailHeader}>
           <div>
-            <div className={styles.detailId}>{order.id}</div>
+            <div className={styles.detailId}>{order.orderNumber || order.id}</div>
             <div className={styles.detailTime}>{createdTime}</div>
           </div>
           <div style={{ textAlign:'right' }}>
             <div className={styles.detailStatus} style={{ background:col.bg, color:col.text }}>
-              {ORDER_STATUS_LABELS[order.status]}
+              {ORDER_STATUS_LABELS[order.status] || order.status}
             </div>
             <div className={styles.detailElapsed}>⏱ {elapsed} oldin</div>
           </div>
@@ -412,7 +324,10 @@ function OrderDetailModal({ order, fmt, onClose, onNext, onCancel }: any) {
         {/* Customer */}
         <div className={styles.detailSection}>
           <div className={styles.detailSectionTitle}>👤 Mijoz</div>
-          <div className={styles.detailRow}><span>Ismi</span><span>{(order as any).customerName || 'Noma\'lum'}</span></div>
+          <div className={styles.detailRow}>
+            <span>Ismi</span>
+            <span>{(order as any).customerName || order.user?.firstName || 'Noma\'lum'}</span>
+          </div>
           <div className={styles.detailRow}>
             <span>Telefon</span>
             <a href={`tel:${order.phone}`} className={styles.phoneLink}>{order.phone}</a>
@@ -433,94 +348,80 @@ function OrderDetailModal({ order, fmt, onClose, onNext, onCancel }: any) {
           )}
         </div>
 
-        {/* Courier (if assigned) */}
-        {order.courierId && (
-          <div className={styles.detailSection}>
-            <div className={styles.detailSectionTitle}>🛵 Kuryer</div>
-            {(() => {
-              const courier = MOCK_COURIERS.find(c => c.id === order.courierId)
-              return courier ? (
-                <>
-                  <div className={styles.detailRow}><span>Ismi</span><span>{courier.name}</span></div>
-                  <div className={styles.detailRow}>
-                    <span>Telefon</span>
-                    <a href={`tel:${courier.phone}`} className={styles.phoneLink}>{courier.phone}</a>
-                  </div>
-                  <div className={styles.detailRow}><span>Reyting</span><span>⭐ {courier.rating}</span></div>
-                </>
-              ) : <div className={styles.detailRow}><span>Kuryer ID</span><span>{order.courierId}</span></div>
-            })()}
-          </div>
-        )}
-
         {/* Delivery */}
         <div className={styles.detailSection}>
-          <div className={styles.detailSectionTitle}>
-            {order.deliveryType==='pickup' ? '🏃 Olib ketish' : '🛵 Yetkazish'}
+          <div className={styles.detailSectionTitle}>📍 Yetkazish</div>
+          <div className={styles.detailRow}>
+            <span>Turi</span>
+            <span>{order.deliveryType === 'pickup' ? '🏃 Olib ketish' : '🛵 Yetkazish'}</span>
           </div>
-          {order.deliveryType === 'delivery' && (
-            <>
-              <div className={styles.detailRow}><span>Manzil</span><span>{order.address}</span></div>
-              {order.addressDetail && <div className={styles.detailRow}><span>Batafsil</span><span>{order.addressDetail}</span></div>}
-            </>
+          {order.address && (
+            <div className={styles.detailRow}>
+              <span>Manzil</span>
+              <span>{order.address}</span>
+            </div>
           )}
+          {order.addressDetail && (
+            <div className={styles.detailRow}>
+              <span>Qo'shimcha</span>
+              <span>{order.addressDetail}</span>
+            </div>
+          )}
+          <div className={styles.detailRow}>
+            <span>To'lov</span>
+            <span>{order.paymentType === 'cash' ? '💵 Naqd' : order.paymentType}</span>
+          </div>
         </div>
 
         {/* Items */}
         <div className={styles.detailSection}>
-          <div className={styles.detailSectionTitle}>🍽️ Buyurtma tarkibi</div>
-          {order.items.map((item: any) => (
-            <div key={item.id} className={styles.detailItem}>
-              <div className={styles.detailItemTop}>
-                <span className={styles.detailItemEmoji}>{item.menuItem.emoji}</span>
-                <span className={styles.detailItemName}>{item.menuItem.name}</span>
-                <span className={styles.detailItemQty}>×{item.quantity}</span>
-                <span className={styles.detailItemPrice}>{fmt(item.price)}</span>
-              </div>
-              {item.extras.length > 0 && (
-                <div className={styles.detailItemExtras}>
-                  {item.extras.map((e:any)=>e.name).join(', ')}
-                </div>
-              )}
-              {item.note && <div className={styles.detailItemNote}>📝 {item.note}</div>}
+          <div className={styles.detailSectionTitle}>🍔 Buyurtma tarkibi</div>
+          {(order.items || []).map((item: any, idx: number) => (
+            <div key={idx} className={styles.detailItem}>
+              <span style={{fontSize:20}}>{item.menuItem?.emoji || '🍔'}</span>
+              <span style={{flex:1}}>{item.menuItem?.name || 'Taom'}</span>
+              <span style={{color:'var(--text-muted)'}}>×{item.quantity}</span>
+              <span style={{fontWeight:700}}>{fmt(item.totalPrice || item.price || 0)}</span>
             </div>
           ))}
-        </div>
-
-        {/* Payment summary */}
-        <div className={styles.detailSection}>
-          <div className={styles.detailSectionTitle}>💳 To'lov</div>
-          <div className={styles.detailRow}><span>Taomlar</span><span>{fmt(order.items.reduce((s:number,i:any)=>s+i.price,0))}</span></div>
-          {order.deliveryFee > 0 && <div className={styles.detailRow}><span>Yetkazish</span><span>{fmt(order.deliveryFee)}</span></div>}
-          {order.discount > 0 && (
-            <div className={clsx(styles.detailRow, styles.detailRowGreen)}>
-              <span>Chegirma {order.promoCode && `(${order.promoCode})`}</span>
-              <span>−{fmt(order.discount)}</span>
+          <div className={styles.detailTotal}>
+            <span>Taomlar</span><span>{fmt(order.subtotal || 0)}</span>
+          </div>
+          {order.deliveryFee > 0 && (
+            <div className={styles.detailRow}>
+              <span>Yetkazish</span><span>{fmt(order.deliveryFee)}</span>
             </div>
           )}
-          <div className={clsx(styles.detailRow, styles.detailRowTotal)}>
-            <span>Jami</span><span>{fmt(order.totalPrice)}</span>
+          {order.discount > 0 && (
+            <div className={styles.detailRow} style={{color:'var(--green)'}}>
+              <span>Chegirma</span><span>−{fmt(order.discount)}</span>
+            </div>
+          )}
+          <div className={styles.detailGrandTotal}>
+            <span>JAMI</span><span>{fmt(order.totalPrice)}</span>
           </div>
-          <div className={styles.detailRow}><span>To'lov usuli</span><span>💵 {order.paymentType==='cash'?'Naqd':'Online'}</span></div>
         </div>
 
+        {order.note && (
+          <div className={styles.detailSection}>
+            <div className={styles.detailSectionTitle}>📝 Izoh</div>
+            <div className={styles.noteText}>{order.note}</div>
+          </div>
+        )}
+
         {/* Actions */}
-        {order.status !== 'cancelled' && order.status !== 'delivered' && (
+        {order.status !== 'delivered' && order.status !== 'cancelled' && (
           <div className={styles.detailActions}>
-            <button className={styles.detailCancelBtn} onClick={onCancel}>
-              ✕ Bekor qilish
-            </button>
+            <button className={styles.detailCancelBtn} onClick={onCancel}>❌ Bekor qilish</button>
             {next && (
               <button className={styles.detailNextBtn} onClick={onNext}>
-                {next==='accepted'  ? '✅ Qabul qilish' :
-                 next==='preparing' ? '👨‍🍳 Tayyorlashni boshlash' :
-                 next==='ready'     ? '📦 Tayyor' :
-                 next==='on_the_way'? '🛵 Kuryerga berish' :
-                 next==='delivered' ? '✅ Yetkazildi' : ORDER_STATUS_LABELS[next]}
+                ✅ {ORDER_STATUS_LABELS[next]}
               </button>
             )}
           </div>
         )}
+
+        <div style={{height:24}} />
       </div>
     </div>
   )
