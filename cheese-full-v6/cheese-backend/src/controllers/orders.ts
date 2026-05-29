@@ -241,7 +241,12 @@ export async function updateOrderStatus(req: FastifyRequest, reply: FastifyReply
     },
   })
 
-  return reply.send(ok(updated))
+  // BigInt fix
+  const result = {
+    ...updated,
+    user: updated.user ? { ...updated.user, telegramId: String((updated.user as any).telegramId) } : null,
+  }
+  return reply.send(ok(result))
 }
 
 // ── COURIER: GET /api/courier/orders ──

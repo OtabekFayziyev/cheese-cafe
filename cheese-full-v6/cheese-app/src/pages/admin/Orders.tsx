@@ -104,7 +104,7 @@ export default function Orders() {
 
   useEffect(() => {
     fetchOrders()
-    const interval = setInterval(fetchOrders, 2000) // every 2s
+    const interval = setInterval(fetchOrders, 15000) // every 15s
     return () => clearInterval(interval)
   }, [])
 
@@ -141,13 +141,19 @@ export default function Orders() {
     })
     .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-  const handleNext = (order: Order) => {
+  const handleNext = async (order: Order) => {
     const next = ORDER_STATUS_NEXT[order.status]
     if (!next) return
     haptic.medium()
     if (next === 'on_the_way') { setCourierModal(order); return }
+    try {
+      await ordersAPI.adminUpdateStatus(order.id, next.toUpperCase())
+      toast.success(`✅ ${ORDER_STATUS_LABELS[next]}`)
+      await fetchOrders()
+    } catch (e) {
+      toast.error('Status yangilanmadi')
+    }
     updateOrderStatus(order.id, next)
-    toast.success(`${order.id} → ${ORDER_STATUS_LABELS[next]}`)
   }
 
   const handleCourierAssign = (courierId: number) => {
@@ -162,11 +168,15 @@ export default function Orders() {
     setCourierModal(null)
   }
 
-  const confirmCancel = () => {
+  const confirmCancel = async () => {
     if (!cancelTarget) return
     haptic.heavy()
+    try {
+      await ordersAPI.adminUpdateStatus(cancelTarget.id, 'CANCELLED')
+      await fetchOrders()
+    } catch (e) {}
     cancelOrder(cancelTarget.id)
-    toast.error(`${cancelTarget.id} bekor qilindi`)
+    toast.error(`❌ Buyurtma bekor qilindi`)
     setCancelTarget(null)
     if (detailOrder?.id === cancelTarget.id) setDetailOrder(null)
   }
