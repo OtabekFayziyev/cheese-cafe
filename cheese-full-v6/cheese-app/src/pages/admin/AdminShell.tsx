@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAdminStore } from '@/store/adminStore'
+import { useAdminData } from '@/hooks/useAdminData'
 import { ordersAPI } from '@/api/client'
 import { useTelegram } from '@/hooks'
 import styles from './AdminShell.module.css'

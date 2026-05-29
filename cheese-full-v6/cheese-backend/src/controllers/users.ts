@@ -137,8 +137,22 @@ export async function getUsers(req: FastifyRequest, reply: FastifyReply) {
     prisma.user.count({ where }),
   ])
 
+  // Add totalSpent for each user
+  const userIds = users.map(u => u.id)
+  const spentData = await prisma.order.groupBy({
+    by: ['userId'],
+    where: { userId: { in: userIds }, status: 'DELIVERED' },
+    _sum: { totalPrice: true },
+  })
+  const spentMap = Object.fromEntries(spentData.map(s => [s.userId, s._sum.totalPrice || 0]))
+
   return reply.send(ok({
-    users: users.map(u => ({ ...u, telegramId: String(u.telegramId) })),
+    users: users.map(u => ({
+      ...u,
+      telegramId:  String(u.telegramId),
+      ordersCount: u._count?.orders || 0,
+      totalSpent:  spentMap[u.id] || 0,
+    })),
     total, page: Number(page) || 1, limit: take,
   }))
 }

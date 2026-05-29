@@ -141,6 +141,10 @@ interface AdminState {
   auditLogs:  AuditLog[]
   cafeInfo:   CafeInfo
 
+  // Data setters (real API)
+  setOrders:    (orders: Order[]) => void
+  setCustomers: (customers: Customer[]) => void
+
   // Orders
   updateOrderStatus: (id: string, status: OrderStatus, adminName?: string) => void
   assignCourier:     (orderId: string, courierId: number) => void
@@ -187,6 +191,9 @@ export const useAdminStore = create<AdminState>()(
         address: 'Toshkent, Yunusobod tumani, 19-mavze',
         mapLink: 'https://maps.google.com',
       },
+
+      setOrders:    (orders) => set({ orders }),
+      setCustomers: (customers) => set({ customers }),
 
       updateOrderStatus: (id, status, adminName = 'Admin') => {
         const old = get().orders.find(o=>o.id===id)
