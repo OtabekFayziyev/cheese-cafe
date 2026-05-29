@@ -185,7 +185,13 @@ export async function getAdminOrders(req: FastifyRequest, reply: FastifyReply) {
     prisma.order.count({ where }),
   ])
 
-  return reply.send(ok({ orders, total, page: Number(page) || 1, limit: take }))
+  // BigInt → String (JSON serialization fix)
+  const serialized = orders.map((o: any) => ({
+    ...o,
+    user: o.user ? { ...o.user, telegramId: String(o.user.telegramId) } : null,
+  }))
+
+  return reply.send(ok({ orders: serialized, total, page: Number(page) || 1, limit: take }))
 }
 
 // PATCH /api/admin/orders/:id/status — status o'zgartirish
