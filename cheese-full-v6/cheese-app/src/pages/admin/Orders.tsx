@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAdminStore, ORDER_STATUS_LABELS, ORDER_STATUS_NEXT, MOCK_COURIERS, STATUS_COLORS } from '@/store/adminStore'
+import { ordersAPI } from '@/api/client'
 import { useFormat, useTelegram } from '@/hooks'
 import { AdminShell, AdminPageHeader } from './AdminShell'
 import type { Order, OrderStatus } from '@/types'
@@ -62,7 +63,7 @@ const FILTER_TABS: {key: OrderStatus|'all'; label:string}[] = [
 export default function Orders() {
   const { haptic }   = useTelegram()
   const { fmt }      = useFormat()
-  const { orders, updateOrderStatus, assignCourier, cancelOrder } = useAdminStore()
+  const { orders: mockOrders, updateOrderStatus, assignCourier, cancelOrder } = useAdminStore()
 
   const [searchParams] = useSearchParams()
   const initialStatus = (searchParams.get('status') || 'all') as OrderStatus | 'all'
@@ -71,8 +72,44 @@ export default function Orders() {
   const [cancelTarget, setCancelTarget]   = useState<Order|null>(null)
   const [courierModal, setCourierModal]   = useState<Order|null>(null)
   const [newOrderPopup, setNewOrderPopup] = useState<Order|null>(null)
-  const prevPendingRef = useRef(orders.filter(o=>o.status==='pending').length)
   const [search, setSearch] = useState('')
+
+  // ── Real API orders ──
+  const [realOrders, setRealOrders] = useState<Order[]>([])
+  const [loading, setLoading]       = useState(true)
+
+  const fetchOrders = async () => {
+    try {
+      const data = await ordersAPI.adminGetAll({ limit: 100 })
+      const mapped = (data.orders || []).map((o: any) => ({
+        ...o,
+        status:       o.status.toLowerCase() as OrderStatus,
+        deliveryType: o.deliveryType?.toLowerCase(),
+        paymentType:  o.paymentType?.toLowerCase(),
+        items: (o.items || []).map((i: any) => ({
+          ...i,
+          menuItem: i.menuItem || { id: i.menuItemId, name: 'Taom', emoji: '🍔', price: i.price },
+          selectedExtras: i.extras || [],
+          totalPrice: i.price,
+        })),
+      }))
+      setRealOrders(mapped)
+    } catch (e) {
+      // fallback to mock
+      setRealOrders(mockOrders)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchOrders()
+    const interval = setInterval(fetchOrders, 2000) // every 2s
+    return () => clearInterval(interval)
+  }, [])
+
+  const orders = realOrders.length > 0 ? realOrders : mockOrders
+  const prevPendingRef = useRef(orders.filter(o=>o.status==='pending').length)
 
   // ── Auto-detect new orders + sound ──
   useEffect(() => {
