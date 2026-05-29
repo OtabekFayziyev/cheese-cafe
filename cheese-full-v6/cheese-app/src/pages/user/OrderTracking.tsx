@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useOrderStore } from '@/store'
+import { ordersAPI } from '@/api/client'
 import { useFormat, useTelegram } from '@/hooks'
 import { AppShell } from '@/components/layout/AppShell'
 import type { OrderStatus } from '@/types'
@@ -42,12 +43,29 @@ function useElapsed(date?: string) {
 }
 
 export default function OrderTracking() {
-  const navigate      = useNavigate()
-  const { fmt }       = useFormat()
-  const { haptic }    = useTelegram()
-  const activeOrder   = useOrderStore(s => s.activeOrder)
-  const orderHistory  = useOrderStore(s => s.orderHistory)
-  const elapsed       = useElapsed(activeOrder?.createdAt)
+  const navigate        = useNavigate()
+  const { fmt }         = useFormat()
+  const { haptic }      = useTelegram()
+  const activeOrder     = useOrderStore(s => s.activeOrder)
+  const orderHistory    = useOrderStore(s => s.orderHistory)
+  const setActiveOrder  = useOrderStore(s => s.setActiveOrder)
+  const elapsed         = useElapsed(activeOrder?.createdAt)
+
+  // Poll real order status every 5s
+  useEffect(() => {
+    if (!activeOrder?.id) return
+    const poll = async () => {
+      try {
+        const updated = await ordersAPI.getOne(activeOrder.id)
+        if (updated && updated.status !== activeOrder.status) {
+          setActiveOrder({ ...activeOrder, ...updated, status: updated.status.toLowerCase() })
+        }
+      } catch {}
+    }
+    poll()
+    const t = setInterval(poll, 5000)
+    return () => clearInterval(t)
+  }, [activeOrder?.id])
 
   // Courier mock location animation
   const [courierPos, setCourierPos] = useState({ x: 35, y: 25 })

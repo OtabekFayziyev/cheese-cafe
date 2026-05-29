@@ -8,6 +8,8 @@ import {
   Settings, MessageCircle, ChevronRight
 } from 'lucide-react'
 import { useUserStore, useCartStore, useOrderStore } from '@/store'
+import { ordersAPI } from '@/api/client'
+import { useEffect } from 'react'
 import { BONUS_REWARDS, VALID_PROMOS } from '@/api/mockData'
 import { AppShell, Page } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui'
@@ -225,7 +227,7 @@ export default function Profile() {
               </button>
             )}
 
-            {orderHistory.length === 0 && !activeOrder ? (
+            {allOrders.length === 0 && !activeOrder ? (
               <div className={styles.historyEmpty}>
                 <div style={{ fontSize: 48, marginBottom: 10 }}>📭</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -237,7 +239,7 @@ export default function Profile() {
               </div>
             ) : (
               <div className={styles.historyList}>
-                {orderHistory.map((order: any) => (
+                {allOrders.map((order: any) => (
                   <div key={order.id} className={styles.historyItem}>
                     <div className={styles.historyLeft}>
                       <div className={styles.historyId}>{order.orderNumber || order.id}</div>

@@ -207,7 +207,7 @@ export default function Orders() {
 
       {/* Cancel confirm */}
       {cancelTarget && (
-        <div className={styles.overlay} onClick={() => setCancelTarget(null)}>
+        <div className={styles.overlay} style={{alignItems:'center',padding:'20px'}} onClick={() => setCancelTarget(null)}>
           <div className={styles.confirmCard} onClick={e => e.stopPropagation()}>
             <div style={{fontSize:48,marginBottom:12}}>❌</div>
             <h3 className={styles.confirmTitle}>Bekor qilinsinmi?</h3>
@@ -222,7 +222,7 @@ export default function Orders() {
 
       {/* Courier modal */}
       {courierModal && (
-        <div className={styles.overlay} onClick={() => setCourierModal(null)}>
+        <div className={styles.overlay} style={{alignItems:'center',padding:'20px'}} onClick={() => setCourierModal(null)}>
           <div className={styles.courierCard} onClick={e => e.stopPropagation()}>
             <h3 className={styles.confirmTitle}>🛵 Kuryer tanlash</h3>
             {MOCK_COURIERS.map(c => (
