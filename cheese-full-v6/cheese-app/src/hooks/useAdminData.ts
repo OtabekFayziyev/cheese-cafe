@@ -60,7 +60,7 @@ export function useAdminData() {
 
   useEffect(() => {
     fetchAll()
-    intervalRef.current = setInterval(fetchAll, 10000) // 10s
+    intervalRef.current = setInterval(fetchAll, 2000) // 2s
     return () => clearInterval(intervalRef.current)
   }, [])
 
