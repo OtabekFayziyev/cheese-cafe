@@ -316,3 +316,29 @@ export async function updateCourierOrderStatus(req: FastifyRequest, reply: Fasti
 
   return reply.send(ok(updated))
 }
+
+// ── PATCH /api/courier/location ──
+export async function updateCourierLocation(req: FastifyRequest, reply: FastifyReply) {
+  const courierId = (req as any).user.userId
+  const { lat, lng } = req.body as { lat: number; lng: number }
+
+  await prisma.user.update({
+    where: { id: courierId },
+    data:  { lat, lng, lastSeenAt: new Date() },
+  })
+
+  return reply.send({ ok: true })
+}
+
+// ── GET /api/courier/:id/location — user tracks courier ──
+export async function getCourierLocation(req: FastifyRequest, reply: FastifyReply) {
+  const { id } = req.params as { id: string }
+
+  const courier = await prisma.user.findUnique({
+    where:  { id: Number(id) },
+    select: { lat: true, lng: true, lastSeenAt: true, firstName: true },
+  })
+
+  if (!courier) return reply.code(404).send({ ok: false })
+  return reply.send({ ok: true, data: courier })
+}

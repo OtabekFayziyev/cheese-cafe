@@ -60,6 +60,8 @@ export async function registerRoutes(app: FastifyInstance) {
   // ═══════════════════════════════════════
   app.get('/api/courier/orders',              { preHandler: [authenticate, requireCourier] }, orders.getCourierOrders)
   app.patch('/api/courier/orders/:id/status', { preHandler: [authenticate, requireCourier] }, orders.updateCourierOrderStatus)
+  app.patch('/api/courier/location',          { preHandler: [authenticate, requireCourier] }, orders.updateCourierLocation)
+  app.get('/api/courier/:id/location',        { preHandler: [authenticate] },                 orders.getCourierLocation)
 
   // ═══════════════════════════════════════
   // HEALTH CHECK

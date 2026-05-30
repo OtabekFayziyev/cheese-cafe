@@ -55,6 +55,9 @@ model User {
   blockReason String?
   blockUntil  DateTime?
   bonusPoints Int       @default(0)
+  lat         Float?
+  lng         Float?
+  lastSeenAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
