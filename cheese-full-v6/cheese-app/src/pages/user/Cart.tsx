@@ -42,7 +42,7 @@ export default function Cart() {
   const [payMethod,    setPayMethod]    = useState<PaymentType>('cash')
   const [cashNotice,   setCashNotice]   = useState(false)
   const [placing,      setPlacing]      = useState(false)
-  const [showLocModal, setShowLocModal] = useState(false)
+  const [showMap, setShowMap] = useState(false)
   const [showRestNote, setShowRestNote] = useState(false)
   const [restNote,     setRestNote]     = useState('')
 
@@ -213,7 +213,7 @@ export default function Cart() {
             <div className={styles.addrRow}>
               <input className={styles.addrInput} value={addrInput}
                 onChange={e => setAddrInput(e.target.value)} placeholder="Ko'cha, uy raqami..." />
-              <button className={styles.mapBtn} onClick={() => setShowLocModal(true)}>🗺️</button>
+              <button className={styles.mapBtn} onClick={() => setShowMap(true)}>🗺️</button>
             </div>
             <input className={styles.addrInput} value={addrDetail}
               onChange={e => setAddrDetail(e.target.value)}
@@ -323,17 +323,16 @@ export default function Cart() {
             </div>
           </div>
         )}
-        {showLocModal && (
-          <div className={styles.cashOverlay} onClick={() => setShowLocModal(false)}>
-            <div className={styles.cashCard} style={{padding:20}} onClick={e=>e.stopPropagation()}>
-              <h3 className={styles.cashTitle} style={{fontSize:18,marginBottom:12}}>📍 Xaritadan tanlash</h3>
-              <div style={{height:130,background:'linear-gradient(135deg,#1a3a1a,#2d5a2d)',borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12,fontSize:36}}>📍</div>
-              <input style={{width:'100%',padding:'10px 12px',borderRadius:10,background:'var(--surface-2)',border:'2px solid var(--border)',color:'var(--text-primary)',fontSize:14,fontFamily:'var(--font-body)',marginBottom:10,outline:'none'}}
-                placeholder="Manzil qidiring..." defaultValue={addrInput}
-                onChange={e=>setAddrInput(e.target.value)} />
-              <Button variant="primary" fullWidth onClick={() => { setShowLocModal(false); toast.success('✅ Manzil saqlandi') }}>Tasdiqlash</Button>
-            </div>
-          </div>
+        {showMap && (
+          <MapPicker
+            initial={coords || undefined}
+            onClose={() => setShowMap(false)}
+            onSelect={(addr) => {
+              setAddrInput(addr)
+              setShowMap(false)
+              toast.success('✅ Manzil saqlandi')
+            }}
+          />
         )}
       </Page>
     </AppShell>
