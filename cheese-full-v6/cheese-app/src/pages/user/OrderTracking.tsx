@@ -192,7 +192,7 @@ export default function OrderTracking() {
               </div>
               <button className={styles.courierCallBtn} onClick={() => window.open("tel:+998901234567")}>
                 <Phone size={18} />
-              </a>
+              </button>
             </div>
           </div>
         )}
