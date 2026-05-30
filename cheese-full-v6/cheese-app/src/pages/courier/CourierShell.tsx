@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import clsx from 'clsx'
 import { Package, Map, ClipboardList, UserCircle, Wifi, WifiOff } from 'lucide-react'
 import { useCourierStore } from '@/store/courierStore'
+import { useCourierData } from '@/hooks/useCourierData'
 import { useTelegram } from '@/hooks'
 import styles from './CourierShell.module.css'
 
@@ -31,6 +32,7 @@ export function CourierShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   const { haptic }   = useTelegram()
   const { profile, setOnline, activeOrders } = useCourierStore()
+  useCourierData() // Real data
 
   return (
     <div className={styles.shell}>

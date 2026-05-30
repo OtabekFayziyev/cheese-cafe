@@ -207,7 +207,25 @@ export async function updateOrderStatus(req: FastifyRequest, reply: FastifyReply
   if (statusUpper === 'ACCEPTED')   timestamps.acceptedAt  = new Date()
   if (statusUpper === 'PREPARING')  timestamps.preparedAt  = new Date()
   if (statusUpper === 'ON_THE_WAY') timestamps.pickedAt    = new Date()
-  if (statusUpper === 'DELIVERED')  timestamps.deliveredAt = new Date()
+  if (statusUpper === 'DELIVERED') {
+    timestamps.deliveredAt = new Date()
+    // Bonus ball berish — har 1000 so'm = 1 ball
+    const bonusPoints = Math.floor(order.totalPrice / 1000)
+    if (bonusPoints > 0) {
+      await prisma.user.update({
+        where: { id: order.userId },
+        data:  { bonusPoints: { increment: bonusPoints } },
+      })
+      // Userga xabar
+      if (order.user?.telegramId) {
+        notifyUserOrderStatus(
+          order.user.telegramId,
+          order.orderNumber,
+          'DELIVERED'
+        ).catch(console.error)
+      }
+    }
+  }
   if (statusUpper === 'CANCELLED')  {
     timestamps.cancelledAt  = new Date()
     timestamps.cancelReason = cancelReason || 'Admin tomonidan'

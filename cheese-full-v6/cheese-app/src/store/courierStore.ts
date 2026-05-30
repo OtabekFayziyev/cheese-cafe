@@ -103,9 +103,12 @@ interface CourierState {
   history:      Order[]
   stats:        CourierStats
 
-  setOnline:       (online: boolean) => void
-  updateOrderStatus: (id: string, status: OrderStatus) => void
-  completeOrder:   (id: string) => void
+  setOnline:        (online: boolean) => void
+  setActiveOrders:  (orders: Order[]) => void
+  setHistory:       (orders: Order[]) => void
+  setStats:         (stats: CourierStats) => void
+  updateOrderStatus:(id: string, status: OrderStatus) => void
+  completeOrder:    (id: string) => void
 }
 
 export const useCourierStore = create<CourierState>()(
@@ -133,8 +136,10 @@ export const useCourierStore = create<CourierState>()(
         totalDeliveries: 234,
       },
 
-      setOnline: (online) =>
-        set(s => ({ profile: { ...s.profile, isOnline: online } })),
+      setOnline:       (online) => set(s => ({ profile: { ...s.profile, isOnline: online } })),
+      setActiveOrders: (orders) => set({ activeOrders: orders }),
+      setHistory:      (orders) => set({ history: orders }),
+      setStats:        (stats)  => set({ stats }),
 
       updateOrderStatus: (id, status) =>
         set(s => ({

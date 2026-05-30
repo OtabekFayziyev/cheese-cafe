@@ -234,7 +234,7 @@ export default function OrderTracking() {
             <Phone size={20} />
             <span>Kuryer bilan bog'lanish</span>
           </a>
-          <button className={clsx(styles.contactBtn, styles.contactBtnSecondary)} onClick={() => { const tg = (window as any).Telegram?.WebApp; tg ? tg.openTelegramLink("https://t.me/cheese_cafe") : window.open("https://t.me/cheese_cafe", "_blank") }}>
+          <button className={clsx(styles.contactBtn, styles.contactBtnSecondary)} onClick={() => { const tg = (window as any).Telegram?.WebApp; if(tg?.openTelegramLink) tg.openTelegramLink('https://t.me/cheese_cafe'); else window.open('https://t.me/cheese_cafe', '_blank') }}>
             <MessageCircle size={20} />
             <span>Restoran bilan bog'lanish</span>
           </button>
