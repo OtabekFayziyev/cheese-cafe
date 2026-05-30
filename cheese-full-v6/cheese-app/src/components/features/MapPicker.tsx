@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 const MAPS_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  if (!MAPS_KEY) return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
   try {
     const res  = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=uz`
@@ -21,9 +23,9 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
 }
 
-declare global { interface Window { google: any; initMap: () => void } }
+declare global { interface Window { google: any; __initGMap: () => void } }
 
-export default function MapPicker({ onSelect, onClose, initial }: Props) {
+function MapPickerContent({ onSelect, onClose, initial }: Props) {
   const mapRef    = useRef<HTMLDivElement>(null)
   const gMapRef   = useRef<any>(null)
   const markerRef = useRef<any>(null)
@@ -33,37 +35,17 @@ export default function MapPicker({ onSelect, onClose, initial }: Props) {
   const [loading, setLoading] = useState(false)
   const [mapReady, setMapReady] = useState(false)
 
-  useEffect(() => {
-    // Load Google Maps script
-    if (window.google?.maps) { initMap(); return }
-
-    window.initMap = initMap
-    const existing = document.getElementById('gmap-script')
-    if (!existing) {
-      const script  = document.createElement('script')
-      script.id     = 'gmap-script'
-      script.src    = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=initMap&language=uz`
-      script.async  = true
-      script.defer  = true
-      document.head.appendChild(script)
-    }
-
-    return () => { window.initMap = () => {} }
-  }, [])
-
   function initMap() {
-    if (!mapRef.current) return
-    const center = coords
+    if (!mapRef.current || !window.google?.maps) return
     const map = new window.google.maps.Map(mapRef.current, {
-      center,
-      zoom: 15,
-      disableDefaultUI:  true,
-      zoomControl:       true,
-      gestureHandling:   'greedy',
-      styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
+      center:          coords,
+      zoom:            15,
+      disableDefaultUI: true,
+      zoomControl:     true,
+      gestureHandling: 'greedy',
     })
     const marker = new window.google.maps.Marker({
-      position: center,
+      position: coords,
       map,
       draggable: true,
     })
@@ -71,60 +53,76 @@ export default function MapPicker({ onSelect, onClose, initial }: Props) {
     markerRef.current = marker
     setMapReady(true)
 
-    // Click on map
-    map.addListener('click', async (e: any) => {
-      const lat = e.latLng.lat()
-      const lng = e.latLng.lng()
+    const onPick = async (lat: number, lng: number) => {
       marker.setPosition({ lat, lng })
       setCoords({ lat, lng })
       setLoading(true)
       const addr = await reverseGeocode(lat, lng)
       setAddress(addr)
       setLoading(false)
+    }
+
+    map.addListener('click', (e: any) => onPick(e.latLng.lat(), e.latLng.lng()))
+    marker.addListener('dragend', () => {
+      const p = marker.getPosition()
+      onPick(p.lat(), p.lng())
     })
 
-    // Drag marker
-    marker.addListener('dragend', async () => {
-      const pos = marker.getPosition()
-      const lat = pos.lat()
-      const lng = pos.lng()
-      setCoords({ lat, lng })
-      setLoading(true)
-      const addr = await reverseGeocode(lat, lng)
-      setAddress(addr)
-      setLoading(false)
-    })
-
-    // Initial geocode if from GPS
     if (initial) {
-      reverseGeocode(initial.lat, initial.lng).then(addr => {
-        setAddress(addr)
-      })
+      reverseGeocode(initial.lat, initial.lng).then(setAddress)
     }
   }
 
+  useEffect(() => {
+    if (window.google?.maps) {
+      setTimeout(initMap, 100)
+      return
+    }
+    window.__initGMap = initMap
+    if (!document.getElementById('gmap-script')) {
+      const s   = document.createElement('script')
+      s.id      = 'gmap-script'
+      s.src     = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=__initGMap&language=uz`
+      s.async   = true
+      s.defer   = true
+      document.head.appendChild(s)
+    } else {
+      // Script loading, wait
+      const check = setInterval(() => {
+        if (window.google?.maps) { clearInterval(check); initMap() }
+      }, 300)
+      setTimeout(() => clearInterval(check), 10000)
+    }
+  }, [])
+
   const handleConfirm = () => {
-    if (address) onSelect(address, coords)
+    if (address && !loading) onSelect(address, coords)
   }
 
   return (
     <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 400,
+      position:   'fixed',
+      top:        0, left: 0, right: 0, bottom: 0,
+      zIndex:     9999,
       background: 'var(--bg)',
-      display: 'flex', flexDirection: 'column',
+      display:    'flex',
+      flexDirection: 'column',
     }}>
       {/* Header */}
       <div style={{
-        padding: '12px 16px',
+        padding:    '12px 16px',
         background: 'var(--surface)',
-        display: 'flex', alignItems: 'center', gap: 12,
+        display:    'flex',
+        alignItems: 'center',
+        gap:        12,
         borderBottom: '1px solid var(--border)',
+        flexShrink: 0,
       }}>
         <button onClick={onClose} style={{
           width: 36, height: 36, borderRadius: '50%',
           background: 'var(--surface-2)', border: 'none',
           color: 'var(--text-primary)', fontSize: 20,
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
         }}>←</button>
         <div>
           <div style={{ fontFamily:"var(--font-display)", fontSize: 18, color: 'var(--text-primary)' }}>
@@ -136,8 +134,8 @@ export default function MapPicker({ onSelect, onClose, initial }: Props) {
         </div>
       </div>
 
-      {/* Map container */}
-      <div style={{ flex: 1, position: 'relative' }}>
+      {/* Map */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
 
         {!mapReady && (
@@ -145,44 +143,47 @@ export default function MapPicker({ onSelect, onClose, initial }: Props) {
             position: 'absolute', inset: 0,
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            background: 'var(--surface-2)', gap: 12,
+            background: '#1a3a2a', gap: 12,
           }}>
-            <div style={{ fontSize: 40 }}>🗺️</div>
-            <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Xarita yuklanmoqda...</div>
+            <div style={{ fontSize: 48 }}>🗺️</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,.7)' }}>Xarita yuklanmoqda...</div>
           </div>
         )}
 
-        {/* Address bubble */}
         {mapReady && (
           <div style={{
-            position: 'absolute', bottom: 16, left: 16, right: 16,
+            position:   'absolute',
+            bottom:     16, left: 16, right: 16,
             background: 'var(--surface)',
             borderRadius: 14, padding: '10px 14px',
-            fontSize: 13, color: loading ? 'var(--text-muted)' : 'var(--text-primary)',
-            boxShadow: '0 4px 20px rgba(0,0,0,.25)',
+            fontSize: 13,
+            color: loading ? 'var(--text-muted)' : 'var(--text-primary)',
+            boxShadow: '0 4px 20px rgba(0,0,0,.3)',
             border: '1.5px solid var(--border)',
           }}>
-            {loading
-              ? '📍 Manzil aniqlanmoqda...'
-              : address || '👆 Manzilni belgilash uchun xaritaga bosing'}
+            {loading ? '📍 Manzil aniqlanmoqda...' : address || '👆 Xaritaga bosing'}
           </div>
         )}
       </div>
 
       {/* Confirm */}
-      <div style={{ padding: '12px 16px', background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
+      <div style={{
+        padding:    '12px 16px',
+        background: 'var(--surface)',
+        borderTop:  '1px solid var(--border)',
+        flexShrink: 0,
+      }}>
         <button
           disabled={!address || loading}
           onClick={handleConfirm}
           style={{
             width: '100%', padding: 14, borderRadius: 14,
-            background: address && !loading ? 'var(--yellow)' : 'var(--surface-2)',
+            background: (address && !loading) ? '#F5C800' : 'var(--surface-2)',
             border: 'none',
-            color: address && !loading ? '#1A1A1A' : 'var(--text-muted)',
+            color: (address && !loading) ? '#1A1A1A' : 'var(--text-muted)',
             fontSize: 15, fontWeight: 700,
             cursor: address ? 'pointer' : 'not-allowed',
             fontFamily: "var(--font-body)",
-            transition: 'all .2s',
           }}
         >
           ✅ Shu manzilni tanlash
@@ -190,4 +191,8 @@ export default function MapPicker({ onSelect, onClose, initial }: Props) {
       </div>
     </div>
   )
+}
+
+export default function MapPicker(props: Props) {
+  return createPortal(<MapPickerContent {...props} />, document.body)
 }

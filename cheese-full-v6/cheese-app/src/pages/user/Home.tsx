@@ -32,7 +32,7 @@ export default function Home() {
   useColorScheme()
 
   const { isOpen, openTime, closeTime } = useWorkHours()
-  const { address }  = useLocation()
+  const { address, loading: locLoading }  = useLocation()
   const user         = useUserStore(s => s.user)
   const activeOrder  = useOrderStore(s => s.activeOrder)
   const displayName  = tgUser?.first_name || user?.firstName || ''
@@ -103,7 +103,7 @@ export default function Home() {
           <MapPin size={16} color="#F5C800" strokeWidth={2.5} />
           <div className={styles.locTexts}>
             <div className={styles.locLabel}>Joylashuv</div>
-            <div className={styles.locValue}>{address || 'Manzil tanlang'}</div>
+            <div className={styles.locValue}>{locLoading ? '📍 Aniqlanmoqda...' : address || '📍 Manzil tanlang'}</div>
           </div>
         </button>
         <div className={styles.topActions}>
