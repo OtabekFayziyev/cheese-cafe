@@ -314,3 +314,6 @@
   display: flex; gap: 12px;
 }
 .bonusInfoItem { display: flex; align-items: center; gap: 4px; }
+
+/* heroInfo — text container in hero */
+.heroInfo { flex: 1; min-width: 0; }

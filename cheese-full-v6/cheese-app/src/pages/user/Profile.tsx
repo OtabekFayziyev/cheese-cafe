@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 import { useUserStore, useCartStore, useOrderStore } from '@/store'
 import { ordersAPI } from '@/api/client'
-import { useEffect } from 'react'
 import { BONUS_REWARDS, VALID_PROMOS } from '@/api/mockData'
 import { AppShell, Page } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui'
@@ -47,8 +46,27 @@ export default function Profile() {
 
   const bonusPoints = user?.bonusPoints ?? 0
   const savedPromos = user?.savedPromos ?? []
-  const [promoInput,   setPromoInput]   = useState('')
-  const [showHistory,  setShowHistory]  = useState(false)
+  const [promoInput,    setPromoInput]   = useState('')
+  const [showHistory,   setShowHistory]  = useState(false)
+  const [realOrders,    setRealOrders]   = useState<any[]>([])
+  const addToHistory    = useOrderStore(s => s.addToHistory)
+
+  // Load real orders
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await ordersAPI.getAll({ limit: 50 })
+        const orders = (data.orders || []).map((o: any) => ({
+          ...o,
+          status: o.status?.toLowerCase(),
+        }))
+        setRealOrders(orders)
+      } catch {}
+    }
+    load()
+  }, [])
+
+  const allOrders = realOrders.length > 0 ? realOrders : orderHistory
 
   const nextReward  = BONUS_REWARDS.find(r => r.pointsRequired > bonusPoints)
   const progressPct = nextReward
@@ -104,12 +122,12 @@ export default function Profile() {
         {/* Hero */}
         <div className={styles.hero}>
           <div className={styles.heroBg} />
-          <div className={styles.heroContent}>
+          <div className={styles.avatarRow}>
             <div className={styles.avatar}>{initials || '👤'}</div>
             <div className={styles.heroInfo}>
-              <div className={styles.heroName}>{displayName}</div>
-              {displayUsername && <div className={styles.heroUsername}>{displayUsername}</div>}
-              {displayPhone && <div className={styles.heroPhone}>{displayPhone}</div>}
+              <div className={styles.userName}>{displayName}</div>
+              {displayUsername && <div className={styles.userSub}>{displayUsername}</div>}
+              {displayPhone && <div className={styles.userPhone}>{displayPhone}</div>}
             </div>
           </div>
         </div>
@@ -194,7 +212,7 @@ export default function Profile() {
               <div className={styles.menuItemText}>
                 <div className={styles.menuItemLabel}>{item.label}</div>
                 <div className={styles.menuItemSub}>
-                  {item.subFn(orderHistory.length)}
+                  {item.subFn(allOrders.length)}
                 </div>
               </div>
               <ChevronRight size={18} strokeWidth={1.5} color="var(--text-muted)" />
