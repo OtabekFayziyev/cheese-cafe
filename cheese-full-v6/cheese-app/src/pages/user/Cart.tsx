@@ -155,17 +155,6 @@ export default function Cart() {
   }
 
   return (
-    <>
-    {showMap && (
-      <MapPicker
-        initial={coords || undefined}
-        onClose={() => setShowMap(false)}
-        onSelect={(addr, c) => {
-          setAddrInput(addr)
-          setShowMap(false)
-        }}
-      />
-    )}
     <AppShell>
       <Page>
         <div className={styles.header}>
@@ -348,6 +337,5 @@ export default function Cart() {
         )}
       </Page>
     </AppShell>
-  </>
   )
 }
