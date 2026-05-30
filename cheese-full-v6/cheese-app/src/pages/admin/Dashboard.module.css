@@ -40,7 +40,7 @@
   position: relative; overflow: hidden;
 }
 .revenueTop { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
-.revenueTitle { font-size: 12px; color: rgba(var(--nav-text-rgb, 255,255,255),.5); margin-bottom: 4px; }
+.revenueTitle { font-size: 12px; color: rgba(255,255,255,.5); margin-bottom: 4px; }
 .revenueVal { font-family: var(--font-display); font-size: 26px; color: var(--yellow); }
 .revenueOrders {
   padding: 5px 12px; border-radius: var(--r-full);
@@ -60,7 +60,7 @@
   min-height: 4px;
 }
 .revenueBarToday { background: var(--yellow) !important; }
-.revenueBarLabel { font-size: 10px; color: rgba(255,255,255,.4); }
+.revenueBarLabel { font-size: 10px; color: rgba(255,255,255,.5); }
 .revenueBarLabelToday { color: var(--yellow); font-weight: 700; }
 
 /* Alert banner */
@@ -127,3 +127,13 @@
 .quickIcon  { font-size: 20px; margin-bottom: 6px; }
 .quickNum   { font-family: var(--font-display); font-size: 16px; color: var(--text-primary); margin-bottom: 3px; }
 .quickLabel { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+
+/* Revenue card always dark */
+[data-theme="light"] .revenueCard { background: #1A1A1A !important; }
+[data-theme="light"] .revenueTitle { color: rgba(255,255,255,.5) !important; }
+[data-theme="light"] .revenueBarLabel { color: rgba(255,255,255,.4) !important; }
+
+/* Admin nav always dark */
+[data-theme="light"] .nav { background: #1A1A1A !important; border-top-color: rgba(255,255,255,.1) !important; }
+[data-theme="light"] .navLabel { color: rgba(255,255,255,.5) !important; }
+[data-theme="light"] .navActive .navLabel { color: var(--yellow) !important; }

@@ -120,3 +120,16 @@
   border: 2px solid #1A1A1A;
   animation: popIn .3s var(--t-spring);
 }
+
+/* Admin nav/header always dark regardless of theme */
+[data-theme="light"] .nav {
+  background: #1A1A1A !important;
+  border-top-color: rgba(255,255,255,.1) !important;
+}
+[data-theme="light"] .navLabel { color: rgba(255,255,255,.4) !important; }
+[data-theme="light"] .navActive .navLabel { color: var(--yellow) !important; }
+[data-theme="light"] .header { background: #111111 !important; }
+[data-theme="light"] .logoText { color: #ffffff !important; }
+[data-theme="light"] .logoSub  { color: rgba(255,255,255,.5) !important; }
+[data-theme="light"] .clockTime { color: var(--yellow) !important; }
+[data-theme="light"] .clockDate { color: rgba(255,255,255,.4) !important; }

@@ -64,12 +64,29 @@ export function useFormat() {
 // ── Work hours — UZB time (UTC+5), 09:00–05:00 ──
 export function useWorkHours() {
   const { settings } = useCafeStore()
-  const adminIsOpen  = (window as any).__cafeIsOpen
+  const [backendIsOpen, setBackendIsOpen] = useState<boolean|null>(null)
+
+  // Load isOpen from backend every 30s
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res  = await fetch((import.meta as any).env?.VITE_API_URL + '/api/settings' || '/api/settings')
+        const data = await res.json()
+        if (data?.data?.settings?.isOpen !== undefined) {
+          const val = data.data.settings.isOpen === 'true' || data.data.settings.isOpen === true
+          setBackendIsOpen(val)
+        }
+      } catch {}
+    }
+    load()
+    const t = setInterval(load, 30000)
+    return () => clearInterval(t)
+  }, [])
 
   const checkOpen = useCallback(() => {
-    // Admin manually closed
-    if (adminIsOpen === false) return false
-    if (adminIsOpen === true)  return true
+    // Backend override takes priority
+    if (backendIsOpen === false) return false
+    if (backendIsOpen === true)  return true
     // UZB time = UTC + 5 hours
     const now = new Date()
     const uzbOffset = 5 * 60 // minutes
@@ -97,7 +114,7 @@ export function useWorkHours() {
     setIsOpen(checkOpen())
     const t = setInterval(() => setIsOpen(checkOpen()), 60_000)
     return () => clearInterval(t)
-  }, [checkOpen])
+  }, [checkOpen, backendIsOpen])
 
   // UZB local day
   const now = new Date()

@@ -1,5 +1,5 @@
 .hero {
-  background: var(--surface);
+  background: #1A1A1A;
   padding: 28px 20px;
   position: relative; overflow: hidden;
 }
@@ -21,7 +21,7 @@
   object-fit: cover; flex-shrink: 0;
   box-shadow: 0 8px 24px rgba(0,0,0,.3);
 }
-.userName   { font-family: var(--font-display); font-size: 22px; color: #fff; margin-bottom: 3px; }
+.userName   { font-family: var(--font-display); font-size: 22px; color: #ffffff; margin-bottom: 3px; }
 .userSub    { font-size: 12px; color: rgba(255,255,255,.5); }
 .userPhone  { font-size: 13px; color: rgba(255,255,255,.6); margin-top: 2px; }
 .userId     { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
@@ -317,3 +317,13 @@
 
 /* heroInfo — text container in hero */
 .heroInfo { flex: 1; min-width: 0; }
+
+/* Light mode fixes */
+[data-theme="light"] .bonusCard { background: #1A1A1A !important; }
+[data-theme="light"] .block .blockTitle { color: var(--text-primary) !important; }
+[data-theme="light"] .menuItemLabel { color: var(--text-primary) !important; }
+[data-theme="light"] .menuItemSub   { color: var(--text-muted) !important; }
+[data-theme="light"] .promoInput    { color: var(--text-primary) !important; }
+[data-theme="light"] .historyId     { color: var(--text-primary) !important; }
+[data-theme="light"] .historyDate   { color: var(--text-muted) !important; }
+[data-theme="light"] .historyTotal  { color: var(--text-primary) !important; }
