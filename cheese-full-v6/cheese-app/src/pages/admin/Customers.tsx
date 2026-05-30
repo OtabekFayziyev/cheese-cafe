@@ -33,7 +33,7 @@ export default function Customers() {
     [customers, search, filter]
   )
 
-  const handleBlock = () => {
+  const handleBlock = async () => {
     if (!blockModal || !blockReason.trim()) { toast.error('Sabab kiriting!'); return }
     haptic.heavy()
     try {
@@ -45,7 +45,7 @@ export default function Customers() {
     if (selected?.id === blockModal.id) setSelected(prev => prev ? {...prev, isBlocked:true} : null)
   }
 
-  const handleUnblock = (c: Customer) => {
+  const handleUnblock = async (c: Customer) => {
     haptic.medium()
     try { await adminAPI.unblockUser(Number(c.id)) } catch {}
     unblockCustomer(c.id)
