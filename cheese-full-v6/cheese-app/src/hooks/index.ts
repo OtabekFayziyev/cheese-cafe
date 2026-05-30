@@ -73,7 +73,7 @@ export function useWorkHours() {
         const res  = await fetch((import.meta as any).env?.VITE_API_URL + '/api/settings' || '/api/settings')
         const data = await res.json()
         if (data?.data?.settings?.isOpen !== undefined) {
-          const val = data.data.settings.is_open === 'true' || data.data.settings.is_open === true
+          const val = data.data.settings.isOpen === 'true' || data.data.settings.isOpen === true
           setBackendIsOpen(val)
         }
       } catch {}
@@ -140,7 +140,23 @@ export function useDebounce<T>(value: T, delay = 400): T {
   return debounced
 }
 
-// ── GPS Location ──
+// ── GPS Location with Google Geocoding ──
+const MAPS_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''
+
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  if (!MAPS_KEY) return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+  try {
+    const res  = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=uz`
+    )
+    const data = await res.json()
+    if (data.status === 'OK' && data.results[0]) {
+      return data.results[0].formatted_address
+    }
+  } catch {}
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+}
+
 export function useLocation() {
   const [address, setAddress] = useState<string>('')
   const [coords, setCoords]   = useState<{ lat: number; lng: number } | null>(null)
@@ -154,9 +170,12 @@ export function useLocation() {
       return
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        setAddress('Yunusobod, 19-uy')
+      async (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        setCoords({ lat, lng })
+        const addr = await reverseGeocode(lat, lng)
+        setAddress(addr)
         setLoading(false)
       },
       () => { setAddress(''); setLoading(false) },

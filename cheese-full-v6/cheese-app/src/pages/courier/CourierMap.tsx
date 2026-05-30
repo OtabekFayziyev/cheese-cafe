@@ -1,148 +1,129 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { GoogleMap, Marker, DirectionsRenderer, useJsApiLoader } from '@react-google-maps/api'
 import { useCourierStore } from '@/store/courierStore'
-import { useFormat, useTelegram } from '@/hooks'
-import { CourierShell, CourierPageHeader } from './CourierShell'
+import { ordersAPI } from '@/api/client'
+import { CourierShell } from './CourierShell'
 import styles from './CourierMap.module.css'
 
-// Animated courier dot on a map stub
-function MapStub({ address }: { address?: string }) {
-  const [pos, setPos] = useState({ x: 40, y: 30 })
+const MAPS_KEY  = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''
+const LIBRARIES: any[] = ['places']
+const MAP_STYLE = { width: '100%', height: '100%' }
 
+export default function CourierMap() {
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: MAPS_KEY,
+    libraries: LIBRARIES,
+  })
+
+  const activeOrders = useCourierStore(s => s.activeOrders)
+  const [courierPos, setCourierPos] = useState<{ lat: number; lng: number } | null>(null)
+  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
+
+  // Track courier position every 30s
   useEffect(() => {
-    const t = setInterval(() => {
-      setPos(p => ({
-        x: Math.max(10, Math.min(85, p.x + (Math.random()-0.5)*8)),
-        y: Math.max(15, Math.min(75, p.y + (Math.random()-0.5)*5)),
-      }))
-    }, 1500)
+    const updatePos = () => {
+      navigator.geolocation?.getCurrentPosition(pos => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        setCourierPos(coords)
+        // Send to backend
+        try {
+          ordersAPI.updateCourierLocation?.(coords.lat, coords.lng)
+        } catch {}
+      })
+    }
+    updatePos()
+    const t = setInterval(updatePos, 30000)
     return () => clearInterval(t)
   }, [])
 
-  return (
-    <div className={styles.mapStub}>
-      {/* Grid lines */}
-      <svg className={styles.mapGrid} viewBox="0 0 100 100" preserveAspectRatio="none">
-        {[20,40,60,80].map(v => (
-          <React.Fragment key={v}>
-            <line x1={v} y1="0" x2={v} y2="100" stroke="rgba(255,255,255,.07)" strokeWidth=".5"/>
-            <line x1="0" y1={v} x2="100" y2={v} stroke="rgba(255,255,255,.07)" strokeWidth=".5"/>
-          </React.Fragment>
-        ))}
-        {/* Roads */}
-        <path d="M0 50 Q30 40 50 50 Q70 60 100 50" stroke="rgba(255,255,255,.15)" strokeWidth="1.5" fill="none"/>
-        <path d="M50 0 Q45 30 50 50 Q55 70 50 100" stroke="rgba(255,255,255,.15)" strokeWidth="1" fill="none"/>
-        <path d="M0 70 Q20 65 40 70 Q60 75 100 68" stroke="rgba(255,255,255,.1)" strokeWidth=".8" fill="none"/>
-      </svg>
+  // Get directions to selected order
+  useEffect(() => {
+    if (!isLoaded || !courierPos || !selectedOrder?.lat || !selectedOrder?.lng) return
+    const svc = new google.maps.DirectionsService()
+    svc.route({
+      origin:      courierPos,
+      destination: { lat: Number(selectedOrder.lat), lng: Number(selectedOrder.lng) },
+      travelMode:  google.maps.TravelMode.DRIVING,
+    }, (result, status) => {
+      if (status === 'OK') setDirections(result)
+    })
+  }, [courierPos, selectedOrder, isLoaded])
 
-      {/* Courier dot (animated) */}
-      <div className={styles.courierDot} style={{ left:`${pos.x}%`, top:`${pos.y}%` }}>
-        <div className={styles.courierDotInner}>🛵</div>
-        <div className={styles.courierDotRing} />
-      </div>
-
-      {/* Destination pin */}
-      <div className={styles.destPin} style={{ left:'70%', top:'60%' }}>
-        📍
-        <div className={styles.destLabel}>{address?.slice(0,14) || 'Manzil'}...</div>
-      </div>
-
-      {/* Live badge */}
-      <div className={styles.liveBadge}>
-        <span className={styles.liveDot} />
-        LIVE
-      </div>
-
-      <div className={styles.mapNote}>Xarita integratsiyasi (Yandex/Google Maps API)</div>
-    </div>
-  )
-}
-
-export default function CourierMap() {
-  const { fmt }    = useFormat()
-  const { haptic } = useTelegram()
-  const { activeOrders, profile } = useCourierStore()
-
-  const currentOrder = activeOrders.find(o => o.status === 'on_the_way')
-  const nextOrder    = activeOrders.find(o => o.status === 'ready')
+  const center = courierPos || { lat: 41.2995, lng: 69.2401 }
 
   return (
     <CourierShell>
-      <CourierPageHeader title="Xarita" subtitle="Joriy joylashuv" />
+      <div className={styles.mapWrap}>
+        {isLoaded ? (
+          <GoogleMap
+            mapContainerStyle={MAP_STYLE}
+            center={center}
+            zoom={14}
+            options={{ disableDefaultUI: true, zoomControl: true }}
+          >
+            {/* Courier position */}
+            {courierPos && (
+              <Marker
+                position={courierPos}
+                icon={{
+                  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+                      <circle cx="20" cy="20" r="18" fill="#F5C800" stroke="#1A1A1A" stroke-width="3"/>
+                      <text x="20" y="26" text-anchor="middle" font-size="18">🛵</text>
+                    </svg>
+                  `),
+                  scaledSize: new google.maps.Size(40, 40),
+                  anchor: new google.maps.Point(20, 20),
+                }}
+              />
+            )}
 
-      {/* Map */}
-      <MapStub address={currentOrder?.address || nextOrder?.address} />
+            {/* Order destinations */}
+            {activeOrders.map((order: any) => order.lat && (
+              <Marker
+                key={order.id}
+                position={{ lat: Number(order.lat), lng: Number(order.lng) }}
+                icon={{
+                  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="16" fill="#EF4444" stroke="white" stroke-width="2"/>
+                      <text x="18" y="24" text-anchor="middle" font-size="16">📍</text>
+                    </svg>
+                  `),
+                  scaledSize: new google.maps.Size(36, 36),
+                  anchor: new google.maps.Point(18, 18),
+                }}
+                onClick={() => setSelectedOrder(order)}
+              />
+            ))}
 
-      {/* Current location */}
-      <div className={styles.locationCard}>
-        <span className={styles.locationIcon}>📡</span>
-        <div>
-          <div className={styles.locationTitle}>Joriy joylashuv (GPS)</div>
-          <div className={styles.locationVal}>Yunusobod, 19-mavze · aniqlanmoqda...</div>
+            {directions && <DirectionsRenderer directions={directions} options={{ suppressMarkers: true }} />}
+          </GoogleMap>
+        ) : (
+          <div className={styles.loading}>🗺️ Xarita yuklanmoqda...</div>
+        )}
+
+        {/* Orders list */}
+        <div className={styles.ordersPanel}>
+          {activeOrders.length === 0 ? (
+            <div className={styles.empty}>Aktiv buyurtma yo'q</div>
+          ) : activeOrders.map((order: any) => (
+            <div key={order.id}
+              className={styles.orderCard}
+              style={{ borderColor: selectedOrder?.id === order.id ? 'var(--yellow)' : 'var(--border)' }}
+              onClick={() => setSelectedOrder(order)}
+            >
+              <div className={styles.orderTop}>
+                <span className={styles.orderId}>{order.orderNumber || order.id}</span>
+                <span className={styles.orderStatus}>{order.status}</span>
+              </div>
+              <div className={styles.orderAddr}>📍 {order.address || 'Manzil yo\'q'}</div>
+              <div className={styles.orderPhone}>📞 {order.phone}</div>
+            </div>
+          ))}
         </div>
-        <button className={styles.refreshBtn} onClick={() => haptic.light()}>🔄</button>
       </div>
-
-      {/* Active order directions */}
-      {currentOrder ? (
-        <div className={styles.dirCard}>
-          <div className={styles.dirTitle}>🧭 Yo'nalish</div>
-          <div className={styles.dirSteps}>
-            <div className={styles.dirStep}>
-              <div className={styles.dirDot} style={{background:'var(--yellow)'}} />
-              <div className={styles.dirStepText}>
-                <div className={styles.dirStepTitle}>Siz</div>
-                <div className={styles.dirStepSub}>Joriy joylashuv</div>
-              </div>
-            </div>
-            <div className={styles.dirLine} />
-            <div className={styles.dirStep}>
-              <div className={styles.dirDot} style={{background:'var(--green)'}} />
-              <div className={styles.dirStepText}>
-                <div className={styles.dirStepTitle}>{currentOrder.address}</div>
-                <div className={styles.dirStepSub}>{currentOrder.addressDetail || 'Kirish raqamini soʻrang'}</div>
-              </div>
-              <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(currentOrder.address||'')}`}
-                target="_blank" rel="noreferrer"
-                className={styles.navBtn}
-              >
-                🗺️ Navigatsiya
-              </a>
-            </div>
-          </div>
-
-          <div className={styles.etaRow}>
-            <div className={styles.etaItem}>
-              <div className={styles.etaVal}>~12</div>
-              <div className={styles.etaLbl}>daqiqa</div>
-            </div>
-            <div className={styles.etaItem}>
-              <div className={styles.etaVal}>2.4</div>
-              <div className={styles.etaLbl}>km</div>
-            </div>
-            <div className={styles.etaItem}>
-              <div className={styles.etaVal}>{fmt(currentOrder.totalPrice)}</div>
-              <div className={styles.etaLbl}>to'lov</div>
-            </div>
-          </div>
-        </div>
-      ) : nextOrder ? (
-        <div className={styles.dirCard}>
-          <div className={styles.dirTitle}>📦 Keyingi vazifa</div>
-          <div className={styles.pickupInfo}>
-            <span>Cafeda: buyurtmani olib keting</span>
-          </div>
-          <a href="https://maps.google.com" target="_blank" rel="noreferrer" className={styles.cafeNavBtn}>
-            🧀 Cafega yo'nalish →
-          </a>
-        </div>
-      ) : (
-        <div className={styles.noOrderCard}>
-          <div className={styles.noOrderIcon}>🕐</div>
-          <div className={styles.noOrderText}>Faol buyurtma yo'q</div>
-          <div className={styles.noOrderSub}>Yangi buyurtma tushganda xaritada ko'rinadi</div>
-        </div>
-      )}
     </CourierShell>
   )
 }

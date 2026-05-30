@@ -12,6 +12,7 @@ import { useFormat, useLocation, useTelegram } from '@/hooks'
 import { ordersAPI } from '@/api/client'
 import { VALID_PROMOS } from '@/api/mockData'
 import { AppShell, Page } from '@/components/layout/AppShell'
+import MapPicker from '@/components/features/MapPicker'
 import { Button, EmptyState } from '@/components/ui'
 import type { PaymentType } from '@/types'
 import styles from './Cart.module.css'
@@ -154,6 +155,17 @@ export default function Cart() {
   }
 
   return (
+    <>
+    {showMap && (
+      <MapPicker
+        initial={coords || undefined}
+        onClose={() => setShowMap(false)}
+        onSelect={(addr, c) => {
+          setAddrInput(addr)
+          setShowMap(false)
+        }}
+      />
+    )}
     <AppShell>
       <Page>
         <div className={styles.header}>
@@ -336,5 +348,7 @@ export default function Cart() {
         )}
       </Page>
     </AppShell>
+  )
+  </>
   )
 }
