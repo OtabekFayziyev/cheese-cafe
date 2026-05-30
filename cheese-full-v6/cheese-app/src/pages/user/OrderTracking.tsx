@@ -190,7 +190,7 @@ export default function OrderTracking() {
                   <Star size={12} fill="#F5C800" color="#F5C800" /> 4.9 · 234 ta yetkazma
                 </div>
               </div>
-              <a href="tel:+998901234567" className={styles.courierCallBtn}>
+              <button className={styles.courierCallBtn} onClick={() => window.open("tel:+998901234567")}>
                 <Phone size={18} />
               </a>
             </div>
@@ -234,11 +234,10 @@ export default function OrderTracking() {
             <Phone size={20} />
             <span>Kuryer bilan bog'lanish</span>
           </a>
-          <a href="https://t.me/cheese_cafe" target="_blank" rel="noreferrer"
-            className={clsx(styles.contactBtn, styles.contactBtnSecondary)}>
+          <button className={clsx(styles.contactBtn, styles.contactBtnSecondary)} onClick={() => { const tg = (window as any).Telegram?.WebApp; tg ? tg.openTelegramLink("https://t.me/cheese_cafe") : window.open("https://t.me/cheese_cafe", "_blank") }}>
             <MessageCircle size={20} />
             <span>Restoran bilan bog'lanish</span>
-          </a>
+          </button>
         </div>
 
         {/* Delivered state */}

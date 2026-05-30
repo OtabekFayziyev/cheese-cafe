@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { useAdminStore, ROLE_LABELS } from '@/store/adminStore'
+import { adminAPI } from '@/api/client'
 import type { AdminRole, AdminUser, AuditLog } from '@/store/adminStore'
 import { useFormat, useTelegram } from '@/hooks'
 import { AdminShell, AdminPageHeader } from './AdminShell'
@@ -25,20 +26,46 @@ export default function Settings() {
 
   const handleSave = () => { haptic.success(); toast.success('✅ Sozlamalar saqlandi!') }
 
-  const handleAddAdmin = () => {
-    if (!newAdmin.name.trim() || !newAdmin.telegramId) { toast.error('Maydonlarni to\'ldiring!'); return }
-    addAdmin({
-      id: `admin-${Date.now()}`,
-      telegramId: Number(newAdmin.telegramId),
-      name: newAdmin.name,
-      phone: newAdmin.phone,
-      role: newAdmin.role,
-      addedAt: new Date().toISOString(),
-      isActive: true,
-    })
-    haptic.success(); toast.success(`${newAdmin.name} admin qo'shildi`)
-    setNewAdmin({ name:'', telegramId:'', phone:'', role:'cashier' })
-    setAddingAdmin(false)
+  const handleAddAdmin = async () => {
+    if (!newAdmin.telegramId) { toast.error('Telegram ID kiriting!'); return }
+    const roleMap: Record<string, string> = {
+      'super_admin': 'ADMIN',
+      'moderator':   'MODERATOR',
+      'cashier':     'CASHIER',
+      'courier':     'COURIER',
+    }
+    const backendRole = roleMap[newAdmin.role] || 'CASHIER'
+
+    try {
+      // Find user by telegramId
+      const usersData = await adminAPI.users({ limit: 500 })
+      const target = (usersData.users || []).find((u: any) =>
+        String(u.telegramId) === String(newAdmin.telegramId)
+      )
+      if (!target) {
+        toast.error('User topilmadi! Avval botga /start bosishi kerak.')
+        return
+      }
+
+      // Update role via adminAPI
+      await adminAPI.updateUserRole(target.id, backendRole)
+
+      addAdmin({
+        id: `admin-${Date.now()}`,
+        telegramId: Number(newAdmin.telegramId),
+        name: `${target.firstName || ''} ${target.lastName || ''}`.trim() || 'Noma\'lum',
+        phone: target.phone || '',
+        role: newAdmin.role,
+        addedAt: new Date().toISOString(),
+        isActive: true,
+      })
+      haptic.success()
+      toast.success(`✅ Rol berildi: ${backendRole}`)
+      setNewAdmin({ name:'', telegramId:'', phone:'', role:'cashier' })
+      setAddingAdmin(false)
+    } catch {
+      toast.error('Xato! Qayta urinib ko\'ring.')
+    }
   }
 
   const filteredLogs = auditLogs.filter(l =>

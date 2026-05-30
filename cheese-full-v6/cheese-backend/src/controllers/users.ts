@@ -306,3 +306,25 @@ export async function getAuditLogs(req: FastifyRequest, reply: FastifyReply) {
 
   return reply.send(ok({ logs, total }))
 }
+
+// PATCH /api/admin/users/:id/role
+export async function updateUserRole(req: FastifyRequest, reply: FastifyReply) {
+  const { id }   = req.params as { id: string }
+  const { role } = req.body as { role: string }
+  
+  const validRoles = ['USER', 'ADMIN', 'MODERATOR', 'CASHIER', 'COURIER']
+  if (!validRoles.includes(role.toUpperCase())) {
+    return reply.code(400).send(err('Noto\'g\'ri rol'))
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: Number(id) },
+    data:  { role: role.toUpperCase() as any },
+    select: { id: true, firstName: true, lastName: true, role: true, telegramId: true },
+  })
+
+  return reply.send(ok({ 
+    ...updated, 
+    telegramId: String(updated.telegramId) 
+  }, `Rol o'zgartirildi: ${role.toUpperCase()}`))
+}

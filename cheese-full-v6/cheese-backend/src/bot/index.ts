@@ -319,11 +319,74 @@ async function sendWelcomeBack(ctx: any, name: string) {
     `🧀 *Xush kelibsiz, ${name}!*\n\n` +
     `Cheese Cafe dan mazali taomlar buyurtma qiling 🍔🍕🍰\n\n` +
     `⏰ Ish vaqti: 09:00 – 04:30\n` +
-    `🚀 Yetkazish: 20-30 daqiqa\n\n` +
-    `👇 Pastdagi *Buyurtma* tugmasini bosing!`,
-    { parse_mode: 'Markdown' }
+    `🚀 Yetkazish: 20-30 daqiqa`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: new InlineKeyboard()
+        .webApp('🛒 Buyurtma berish', `${MINI_APP_URL}/user`)
+        .row()
+        .webApp('📋 Mening buyurtmalarim', `${MINI_APP_URL}/user/order-tracking`),
+    }
   )
 }
+
+// ── Admin → User xabar yuborish ──
+// /send <telegramId> <xabar>
+bot.command('send', async (ctx) => {
+  const adminId = ctx.from?.id
+  if (!ADMIN_IDS.includes(adminId || 0)) {
+    await ctx.reply('❌ Bu buyruq faqat adminlar uchun.')
+    return
+  }
+
+  const text = ctx.message?.text || ''
+  const parts = text.split(' ')
+  if (parts.length < 3) {
+    await ctx.reply(
+      '❌ Noto\'g\'ri format\n\n' +
+      'To\'g\'ri format:\n' +
+      '`/send <telegram_id> <xabar matni>`\n\n' +
+      'Misol:\n' +
+      '`/send 123456789 Buyurtmangiz tayyor!`',
+      { parse_mode: 'Markdown' }
+    )
+    return
+  }
+
+  const targetId = parts[1]
+  const message  = parts.slice(2).join(' ')
+
+  try {
+    await bot.api.sendMessage(targetId, 
+      `📢 *Admin xabari:*\n\n${message}`,
+      { parse_mode: 'Markdown' }
+    )
+    await ctx.reply(`✅ Xabar yuborildi → ${targetId}`)
+  } catch (e: any) {
+    await ctx.reply(`❌ Xabar yuborilmadi: ${e.message}`)
+  }
+})
+
+// ── Barcha userlar ro'yxati (admin uchun) ──
+bot.command('users', async (ctx) => {
+  const adminId = ctx.from?.id
+  if (!ADMIN_IDS.includes(adminId || 0)) return
+
+  try {
+    const { prisma } = await import('../utils/db')
+    const users = await prisma.user.findMany({
+      take: 20,
+      orderBy: { createdAt: 'desc' },
+      select: { telegramId: true, firstName: true, lastName: true, phone: true, role: true },
+    })
+    const list = users.map(u => 
+      `👤 ${u.firstName} ${u.lastName || ''} | 📞 ${u.phone || 'yo\'q'} | ID: ${u.telegramId}`
+    ).join('\n')
+    await ctx.reply(`👥 *Oxirgi 20 user:*\n\n${list}`, { parse_mode: 'Markdown' })
+  } catch (e: any) {
+    await ctx.reply(`❌ Xato: ${e.message}`)
+  }
+})
 
 bot.catch((err) => {
   console.error('Bot xatosi:', err.message)

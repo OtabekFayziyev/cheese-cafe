@@ -86,12 +86,14 @@ export const settingsAPI = {
 
 // ── Admin ──
 export const adminAPI = {
-  stats:      ()           => api.get('/api/admin/stats').then(r => r.data.data),
-  users:      (params?: any) => api.get('/api/admin/users', { params }).then(r => r.data.data),
-  blockUser:  (id: number, reason: string, until?: string) =>
+  stats:          ()           => api.get('/api/admin/stats').then(r => r.data.data),
+  users:          (params?: any) => api.get('/api/admin/users', { params }).then(r => r.data.data),
+  blockUser:      (id: number, reason: string, until?: string) =>
     api.patch(`/api/admin/users/${id}/block`, { reason, until }).then(r => r.data.data),
-  unblockUser:(id: number) => api.patch(`/api/admin/users/${id}/unblock`).then(r => r.data.data),
-  auditLogs:  (params?: any) => api.get('/api/admin/audit-logs', { params }).then(r => r.data.data),
+  unblockUser:    (id: number) => api.patch(`/api/admin/users/${id}/unblock`).then(r => r.data.data),
+  updateUserRole: (id: number, role: string) =>
+    api.patch(`/api/admin/users/${id}/role`, { role }).then(r => r.data.data),
+  auditLogs:      (params?: any) => api.get('/api/admin/audit-logs', { params }).then(r => r.data.data),
 }
 
 // ── Socket ──
