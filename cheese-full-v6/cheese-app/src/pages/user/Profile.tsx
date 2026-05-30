@@ -323,7 +323,7 @@ export default function Profile() {
                  selectedHistOrder.status === 'accepted' ? '✅ Qabul qilindi' :
                  selectedHistOrder.status === 'preparing' ? '👨‍🍳 Tayyorlanmoqda' :
                  selectedHistOrder.status === 'ready' ? '📦 Tayyor' :
-                 selectedHistOrder.status === 'on_the_way' ? '🛵 Yo'lda' : selectedHistOrder.status}
+                 selectedHistOrder.status === 'on_the_way' ? "🛵 Yo'lda" : selectedHistOrder.status}
               </div>
             </div>
 
