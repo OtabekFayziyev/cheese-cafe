@@ -194,7 +194,7 @@ export default function Home() {
             <div className={styles.trackingLeft}>
               <span className={styles.trackingIcon}>📦</span>
               <div>
-                <div className={styles.trackingTitle}>Buyurtmangiz yo'lda</div>
+                <div className={styles.trackingTitle}>Buyurtma holati</div>
                 <div className={styles.trackingSub}>
                   {(activeOrder as any).orderNumber} · Kuzatish uchun bosing
                 </div>
