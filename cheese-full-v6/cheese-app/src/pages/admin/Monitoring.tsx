@@ -34,6 +34,7 @@ export default function Monitoring() {
   const { fmt }    = useFormat()
   const { orders, menuItems } = useAdminStore()
 
+  const [search, setSearch] = useState('')
   const [period, setPeriod] = useState<Period>('week')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate]     = useState('')

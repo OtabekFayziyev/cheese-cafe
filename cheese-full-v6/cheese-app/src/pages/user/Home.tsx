@@ -4,6 +4,7 @@ import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { MapPin, Bell, User } from 'lucide-react'
 import { useWorkHours, useLocation, useFormat, useTelegram, useColorScheme, useMenuItems, useCategories } from '@/hooks'
+import { settingsAPI } from '@/api/client'
 import { useUserStore, useOrderStore } from '@/store'
 import { MENU_ITEMS, CATEGORIES } from '@/api/mockData'
 import { AppShell, Page, SectionHeader } from '@/components/layout/AppShell'
@@ -59,6 +60,11 @@ export default function Home() {
     autoRef.current = setInterval(nextSlide, 3800)
     return () => clearInterval(autoRef.current)
   }, [nextSlide])
+
+  // Load real cafe settings
+  useEffect(() => {
+    settingsAPI.get().catch(() => {})
+  }, [])
 
   const goSlide = (i: number) => {
     clearInterval(autoRef.current)

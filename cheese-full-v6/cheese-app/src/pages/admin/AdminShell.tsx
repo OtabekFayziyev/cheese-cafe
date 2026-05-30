@@ -97,6 +97,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             haptic.medium()
             const newVal = !settings.isOpen
             setIsOpen(newVal)
+            ;(window as any).__cafeIsOpen = newVal
             try { await settingsAPI.update({ isOpen: String(newVal) }) } catch {}
           }}
         >

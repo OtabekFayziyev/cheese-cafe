@@ -64,8 +64,12 @@ export function useFormat() {
 // ── Work hours — UZB time (UTC+5), 09:00–05:00 ──
 export function useWorkHours() {
   const { settings } = useCafeStore()
+  const adminIsOpen  = (window as any).__cafeIsOpen
 
   const checkOpen = useCallback(() => {
+    // Admin manually closed
+    if (adminIsOpen === false) return false
+    if (adminIsOpen === true)  return true
     // UZB time = UTC + 5 hours
     const now = new Date()
     const uzbOffset = 5 * 60 // minutes
