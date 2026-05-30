@@ -109,7 +109,7 @@ export default function MapPicker({ onSelect, onClose, initial }: Props) {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 400,
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 400,
       background: 'var(--bg)',
       display: 'flex', flexDirection: 'column',
     }}>
