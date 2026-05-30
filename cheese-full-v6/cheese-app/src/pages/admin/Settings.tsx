@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { useAdminStore, ROLE_LABELS } from '@/store/adminStore'
-import { adminAPI } from '@/api/client'
+import { adminAPI, settingsAPI, menuAPI } from '@/api/client'
 import type { AdminRole, AdminUser, AuditLog } from '@/store/adminStore'
 import { useFormat, useTelegram } from '@/hooks'
 import { AdminShell, AdminPageHeader } from './AdminShell'
@@ -24,7 +24,28 @@ export default function Settings() {
   const updateDay = (idx:number, field:string, val:any) =>
     updateSettings({ workHours: settings.workHours.map((d,i) => i===idx ? {...d,[field]:val} : d) })
 
-  const handleSave = () => { haptic.success(); toast.success('✅ Sozlamalar saqlandi!') }
+  const handleSave = async () => {
+    haptic.success()
+    try {
+      // Save work hours
+      await settingsAPI.updateHours(settings.workHours.map((h, i) => ({
+        day: i, open: h.open, close: h.close, isOff: h.isOff || false,
+      })))
+      // Save cafe settings
+      await settingsAPI.update({
+        delivery_fee_base:   String(settings.deliveryFee),
+        min_order_amount:    String(settings.minOrderAmount),
+        estimated_time:      String(settings.estimatedTime),
+        cafe_phone:          cafeInfo.phone,
+        cafe_address:        cafeInfo.address,
+        cafe_instagram:      cafeInfo.instagram,
+        cafe_telegram:       cafeInfo.telegram,
+      })
+      toast.success('✅ Sozlamalar saqlandi!')
+    } catch {
+      toast.error('Xato yuz berdi')
+    }
+  }
 
   const handleAddAdmin = async () => {
     if (!newAdmin.telegramId) { toast.error('Telegram ID kiriting!'); return }

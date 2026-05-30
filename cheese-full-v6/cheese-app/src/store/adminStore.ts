@@ -144,6 +144,7 @@ interface AdminState {
   // Data setters (real API)
   setOrders:    (orders: Order[]) => void
   setCustomers: (customers: Customer[]) => void
+  setMenuItems: (items: MenuItem[]) => void
 
   // Orders
   updateOrderStatus: (id: string, status: OrderStatus, adminName?: string) => void
@@ -194,6 +195,7 @@ export const useAdminStore = create<AdminState>()(
 
       setOrders:    (orders) => set({ orders }),
       setCustomers: (customers) => set({ customers }),
+      setMenuItems: (menuItems) => set({ menuItems }),
 
       updateOrderStatus: (id, status, adminName = 'Admin') => {
         const old = get().orders.find(o=>o.id===id)

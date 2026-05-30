@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { useAdminStore } from '@/store/adminStore'
+import { adminAPI } from '@/api/client'
 import { useFormat, useTelegram } from '@/hooks'
 import { AdminShell, AdminPageHeader } from './AdminShell'
 import type { Customer } from '@/store/adminStore'
@@ -35,16 +36,20 @@ export default function Customers() {
   const handleBlock = () => {
     if (!blockModal || !blockReason.trim()) { toast.error('Sabab kiriting!'); return }
     haptic.heavy()
+    try {
+      await adminAPI.blockUser(Number(blockModal.id), blockReason, blockUntil||undefined)
+    } catch {}
     blockCustomer(blockModal.id, blockReason, blockUntil||undefined)
-    toast.error(`${blockModal.firstName} bloklandi`)
+    toast.error(`🚫 ${blockModal.firstName} bloklandi`)
     setBlockModal(null); setBlockReason(''); setBlockUntil('')
     if (selected?.id === blockModal.id) setSelected(prev => prev ? {...prev, isBlocked:true} : null)
   }
 
   const handleUnblock = (c: Customer) => {
     haptic.medium()
+    try { await adminAPI.unblockUser(Number(c.id)) } catch {}
     unblockCustomer(c.id)
-    toast.success(`${c.firstName} blokdan chiqarildi`)
+    toast.success(`✅ ${c.firstName} blokdan chiqarildi`)
     if (selected?.id === c.id) setSelected(prev => prev ? {...prev, isBlocked:false} : null)
   }
 

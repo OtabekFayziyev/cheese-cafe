@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { useCourierStore, VEHICLE_ICONS } from '@/store/courierStore'
+import { useUserStore } from '@/store'
 import { useFormat, useTelegram } from '@/hooks'
 import { CourierShell, CourierPageHeader } from './CourierShell'
 import styles from './CourierProfile.module.css'
@@ -10,6 +11,11 @@ export default function CourierProfile() {
   const { haptic } = useTelegram()
   const { fmt }    = useFormat()
   const { profile, stats, setOnline } = useCourierStore()
+  const user = useUserStore(s => s.user)
+  
+  // Real user data override
+  const displayName  = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : `${profile.firstName} ${profile.lastName}`
+  const displayPhone = user?.phone || profile.phone
   const [vehicleEdit, setVehicleEdit] = useState(false)
 
   return (
@@ -22,8 +28,8 @@ export default function CourierProfile() {
             {VEHICLE_ICONS[profile.vehicleType]}
           </div>
           <div className={styles.info}>
-            <div className={styles.name}>{profile.firstName} {profile.lastName}</div>
-            <div className={styles.phone}>{profile.phone}</div>
+            <div className={styles.name}>{displayName}</div>
+            <div className={styles.phone}>{displayPhone}</div>
             <div className={styles.rating}>⭐ {profile.rating} · {profile.totalDeliveries} ta yetkazma</div>
             <div className={clsx(styles.statusBadge, profile.isOnline && styles.statusOnline)}>
               <span className={styles.statusDot} />

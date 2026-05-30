@@ -100,7 +100,7 @@ export default function Cart() {
       const realOrder = await ordersAPI.create(orderData)
       setActiveOrder(realOrder)
       addToHistory(realOrder)
-      addBonusPoints(Math.floor(total() / 1000))
+      addBonusPoints(Math.floor(total() / 1000)) // 10 ball per 10,000
       clear(); haptic.success()
       confetti({ particleCount:80, spread:70, origin:{y:.5}, colors:['#F5C800','#1A1A1A'] })
       toast.success('🎉 Buyurtma berildi!', { duration: 3000 })
@@ -126,12 +126,13 @@ export default function Cart() {
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     }
     setActiveOrder(mockOrder); addToHistory(mockOrder)
-    addBonusPoints(Math.floor(total() / 1000))
+    addBonusPoints(Math.floor(total() / 1000)) // 10 ball per 10,000
     clear(); haptic.success()
     confetti({ particleCount:80, spread:70, origin:{y:.5}, colors:['#F5C800','#1A1A1A'] })
     toast.success('🎉 Buyurtma berildi!', { duration: 3000 })
     setPlacing(false)
     navigate('/user/order-tracking')
+    setOrdering(false)
   }
 
   if (!items.length) {
