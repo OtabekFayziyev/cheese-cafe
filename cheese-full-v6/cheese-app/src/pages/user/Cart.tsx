@@ -348,7 +348,6 @@ export default function Cart() {
         )}
       </Page>
     </AppShell>
-  )
   </>
   )
 }
