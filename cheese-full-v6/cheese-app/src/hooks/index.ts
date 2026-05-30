@@ -73,7 +73,7 @@ export function useWorkHours() {
         const res  = await fetch((import.meta as any).env?.VITE_API_URL + '/api/settings' || '/api/settings')
         const data = await res.json()
         if (data?.data?.settings?.isOpen !== undefined) {
-          const val = data.data.settings.isOpen === 'true' || data.data.settings.isOpen === true
+          const val = data.data.settings.is_open === 'true' || data.data.settings.is_open === true
           setBackendIsOpen(val)
         }
       } catch {}
