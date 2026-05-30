@@ -110,10 +110,10 @@
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: all var(--t-fast);
 }
-.cancelBtn:hover { background: var(--red); color: #fff; }
+.cancelBtn:hover { background: var(--red); color: var(--light); }
 .nextBtn {
   padding: 0 14px; height: 32px; border-radius: var(--r-sm);
-  background: var(--yellow); border: none; color: #1A1A1A;
+  background: var(--yellow); border: none; color: var(--dark);
   font-size: 12px; font-weight: 700; cursor: pointer;
   font-family: var(--font-body); white-space: nowrap;
 }
@@ -205,7 +205,7 @@
 }
 .detailNextBtn {
   flex: 2; padding: 13px; border-radius: var(--r-md);
-  background: var(--yellow); border: none; color: #1A1A1A;
+  background: var(--yellow); border: none; color: var(--dark);
   font-size: 14px; font-weight: 700; cursor: pointer;
   font-family: var(--font-body); box-shadow: var(--shadow-yellow);
 }
@@ -227,7 +227,7 @@
 }
 .confirmYes {
   flex: 1; padding: 12px; border-radius: var(--r-md);
-  background: var(--red); border: none; color: #fff;
+  background: var(--red); border: none; color: var(--light);
   font-size: 14px; font-weight: 700; cursor: pointer; font-family: var(--font-body);
 }
 .courierCard {

@@ -36,7 +36,7 @@
 .addBtn {
   padding: 8px 16px; border-radius: var(--r-md);
   background: var(--yellow); border: none;
-  color: #1A1A1A; font-size: 13px; font-weight: 700;
+  color: var(--dark); font-size: 13px; font-weight: 700;
   cursor: pointer; font-family: var(--font-body);
   transition: all var(--t-fast);
 }
@@ -132,7 +132,7 @@
 /* Buttons */
 .saveBtn {
   flex: 1; padding: 13px; border-radius: var(--r-md);
-  background: var(--yellow); border: none; color: #1A1A1A;
+  background: var(--yellow); border: none; color: var(--dark);
   font-size: 15px; font-weight: 700; cursor: pointer;
   font-family: var(--font-body); transition: all var(--t-fast);
 }
@@ -163,7 +163,7 @@
 .confirmBtns  { display: flex; gap: 10px; }
 .dangerBtn {
   flex: 1; padding: 13px; border-radius: var(--r-md);
-  background: var(--red); border: none; color: #fff;
+  background: var(--red); border: none; color: var(--light);
   font-size: 15px; font-weight: 700; cursor: pointer;
   font-family: var(--font-body);
 }

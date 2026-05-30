@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { useAdminStore } from '@/store/adminStore'
-import { ordersAPI, adminAPI } from '@/api/client'
+import { ordersAPI, adminAPI, settingsAPI } from '@/api/client'
 
 // Global hook — AdminShell da bir marta chaqiriladi
 // Barcha admin sahifalariga real data yetkazadi
 export function useAdminData() {
-  const setOrders    = useAdminStore(s => s.setOrders)
-  const setCustomers = useAdminStore(s => s.setCustomers)
+  const setOrders      = useAdminStore(s => s.setOrders)
+  const setCustomers   = useAdminStore(s => s.setCustomers)
+  const updateSettings = useAdminStore(s => s.updateSettings)
   const intervalRef  = useRef<ReturnType<typeof setInterval>>()
 
   const fetchAll = async () => {
@@ -55,6 +56,16 @@ export function useAdminData() {
         createdAt:    u.createdAt,
       }))
       setCustomers(mappedCustomers)
+    } catch {}
+
+    try {
+      // Settings — backend returns { settings: {key:value}, workHours: [...] }
+      const data = await settingsAPI.get()
+      if (data?.settings) {
+        const isOpen = data.settings.isOpen === 'true' || data.settings.isOpen === true
+        ;(window as any).__cafeIsOpen = isOpen
+        updateSettings({ isOpen })
+      }
     } catch {}
   }
 

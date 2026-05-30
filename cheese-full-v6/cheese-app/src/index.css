@@ -229,3 +229,29 @@ body {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
+
+/* ── Light mode text fixes ── */
+[data-theme="light"] .revenueTitle,
+[data-theme="light"] .bonusPtsLbl,
+[data-theme="light"] .bonusNextLbl,
+[data-theme="light"] .rewardName,
+[data-theme="light"] .clockDate,
+[data-theme="light"] .navLabel,
+[data-theme="light"] .logoSub {
+  color: var(--text-muted) !important;
+}
+
+/* Admin nav/header always dark bg */
+[data-theme="light"] .header {
+  background: #1A1A1A !important;
+}
+[data-theme="light"] .logoText,
+[data-theme="light"] .clockTime {
+  color: #fff !important;
+}
+[data-theme="light"] .navLabel {
+  color: rgba(255,255,255,.6) !important;
+}
+[data-theme="light"] .navActive .navLabel {
+  color: var(--yellow) !important;
+}

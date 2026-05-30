@@ -47,8 +47,9 @@ export default function Profile() {
   const bonusPoints = user?.bonusPoints ?? 0
   const savedPromos = user?.savedPromos ?? []
   const [promoInput,    setPromoInput]   = useState('')
-  const [showHistory,   setShowHistory]  = useState(false)
-  const [realOrders,    setRealOrders]   = useState<any[]>([])
+  const [showHistory,        setShowHistory]       = useState(false)
+  const [realOrders,         setRealOrders]        = useState<any[]>([])
+  const [selectedHistOrder,  setSelectedHistOrder] = useState<any>(null)
   const addToHistory    = useOrderStore(s => s.addToHistory)
 
   // Load real orders
@@ -258,7 +259,9 @@ export default function Profile() {
             ) : (
               <div className={styles.historyList}>
                 {allOrders.map((order: any) => (
-                  <div key={order.id} className={styles.historyItem}>
+                  <div key={order.id} className={styles.historyItem} 
+                    style={{cursor:'pointer'}}
+                    onClick={() => setSelectedHistOrder(order)}>
                     <div className={styles.historyLeft}>
                       <div className={styles.historyId}>{order.orderNumber || order.id}</div>
                       <div className={styles.historyItems2}>
@@ -288,6 +291,79 @@ export default function Profile() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Order detail modal */}
+      {selectedHistOrder && (
+        <div className={styles.historyOverlay} onClick={() => setSelectedHistOrder(null)}>
+          <div className={styles.historySheet} onClick={e => e.stopPropagation()}>
+            <div className={styles.historyHandle} />
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16}}>
+              <div>
+                <div style={{fontFamily:"var(--font-display)", fontSize:20, color:'var(--text-primary)'}}>
+                  {selectedHistOrder.orderNumber || selectedHistOrder.id}
+                </div>
+                <div style={{fontSize:12, color:'var(--text-muted)', marginTop:2}}>
+                  {new Date(selectedHistOrder.createdAt).toLocaleString('uz-UZ', {
+                    day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
+                  })}
+                </div>
+              </div>
+              <div style={{
+                padding:'4px 12px', borderRadius:'999px', fontSize:11, fontWeight:800,
+                background: selectedHistOrder.status === 'delivered' ? 'var(--green-soft)' :
+                            selectedHistOrder.status === 'cancelled' ? 'var(--red-soft)' : 'rgba(245,200,0,.15)',
+                color: selectedHistOrder.status === 'delivered' ? 'var(--green)' :
+                       selectedHistOrder.status === 'cancelled' ? 'var(--red)' : 'var(--yellow-dark)',
+              }}>
+                {selectedHistOrder.status === 'delivered' ? '✅ Yetkazildi' :
+                 selectedHistOrder.status === 'cancelled' ? '❌ Bekor' :
+                 selectedHistOrder.status === 'pending' ? '🔔 Kutilmoqda' :
+                 selectedHistOrder.status === 'accepted' ? '✅ Qabul qilindi' :
+                 selectedHistOrder.status === 'preparing' ? '👨‍🍳 Tayyorlanmoqda' :
+                 selectedHistOrder.status === 'ready' ? '📦 Tayyor' :
+                 selectedHistOrder.status === 'on_the_way' ? '🛵 Yo'lda' : selectedHistOrder.status}
+              </div>
+            </div>
+
+            {/* Items */}
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:12, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.5px', marginBottom:8}}>
+                🍔 Buyurtma tarkibi
+              </div>
+              {(selectedHistOrder.items || []).map((item: any, idx: number) => (
+                <div key={idx} style={{display:'flex', alignItems:'center', gap:8, padding:'7px 0', borderBottom:'1px solid var(--border)', fontSize:14}}>
+                  <span style={{fontSize:20}}>{item.menuItem?.emoji || '🍔'}</span>
+                  <span style={{flex:1, color:'var(--text-primary)', fontWeight:600}}>{item.menuItem?.name || 'Taom'}</span>
+                  <span style={{color:'var(--text-muted)'}}>×{item.quantity}</span>
+                  <span style={{fontWeight:700, color:'var(--text-primary)'}}>{fmt(item.price || item.totalPrice || 0)} so'm</span>
+                </div>
+              ))}
+              <div style={{display:'flex', justifyContent:'space-between', fontFamily:'var(--font-display)', fontSize:20, marginTop:10, paddingTop:8, borderTop:'2px solid var(--border)'}}>
+                <span>JAMI</span>
+                <span style={{color:'var(--yellow)'}}>{fmt(selectedHistOrder.totalPrice)} so'm</span>
+              </div>
+            </div>
+
+            {/* Delivery info */}
+            <div style={{background:'var(--surface-2)', borderRadius:12, padding:'12px 14px'}}>
+              <div style={{fontSize:12, fontWeight:700, color:'var(--text-muted)', marginBottom:8, textTransform:'uppercase', letterSpacing:'.5px'}}>
+                📍 Yetkazish
+              </div>
+              <div style={{fontSize:13, color:'var(--text-primary)', marginBottom:4}}>
+                {selectedHistOrder.deliveryType === 'pickup' ? '🏃 Olib ketish' : '🛵 Yetkazish'}
+              </div>
+              {selectedHistOrder.address && (
+                <div style={{fontSize:13, color:'var(--text-muted)'}}>{selectedHistOrder.address}</div>
+              )}
+            </div>
+
+            <button
+              style={{width:'100%', padding:14, borderRadius:12, background:'var(--surface-2)', border:'1.5px solid var(--border)', color:'var(--text-muted)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"var(--font-body)", marginTop:14}}
+              onClick={() => setSelectedHistOrder(null)}>
+              Yopish
+            </button>
           </div>
         </div>
       )}
