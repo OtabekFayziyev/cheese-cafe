@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 const MAPS_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''
@@ -12,7 +12,7 @@ interface Props {
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   if (!MAPS_KEY) return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
   try {
-    const res = await fetch(
+    const res  = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=uz`
     )
     const data = await res.json()
@@ -24,23 +24,25 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
 }
 
 function MapPickerContent({ onSelect, onClose, initial }: Props) {
-  const center  = initial || { lat: 41.2995, lng: 69.2401 }
+  const center = initial || { lat: 41.2995, lng: 69.2401 }
   const [coords,     setCoords]     = useState(center)
   const [address,    setAddress]    = useState('')
   const [loading,    setLoading]    = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
-  const [mapLat,     setMapLat]     = useState(center.lat)
-  const [mapLng,     setMapLng]     = useState(center.lng)
-  const [zoom,       setZoom]       = useState(15)
 
-  // Embed URL — updates when coords change
-  const embedUrl = `https://www.google.com/maps/embed/v1/view?key=${MAPS_KEY}&center=${mapLat},${mapLng}&zoom=${zoom}&maptype=roadmap`
+  const embedUrl = `https://www.google.com/maps/embed/v1/view?key=${MAPS_KEY}&center=${coords.lat},${coords.lng}&zoom=16&maptype=roadmap`
 
-  // Auto-geocode initial position
   useEffect(() => {
     if (initial) {
       reverseGeocode(initial.lat, initial.lng).then(setAddress)
     }
+  }, [])
+
+  // Lock body scroll
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
   }, [])
 
   const detectGPS = () => {
@@ -51,9 +53,6 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
         const lat = pos.coords.latitude
         const lng = pos.coords.longitude
         setCoords({ lat, lng })
-        setMapLat(lat)
-        setMapLng(lng)
-        setZoom(17)
         setGpsLoading(false)
         setLoading(true)
         const addr = await reverseGeocode(lat, lng)
@@ -62,121 +61,133 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
       },
       (err) => {
         setGpsLoading(false)
-        if (err.code === 1) alert('GPS ruxsat berilmagan. Sozlamalarda joylashuvga ruxsat bering.')
-        else alert('GPS xatosi. Qayta urining.')
+        alert(err.code === 1
+          ? 'GPS ruxsat berilmagan. Sozlamalarda joylashuvga ruxsat bering.'
+          : 'GPS xatosi. Qayta urining.')
       },
       { timeout: 10000, enableHighAccuracy: true }
     )
   }
 
-  const handleUseCurrentView = async () => {
-    setLoading(true)
-    const addr = await reverseGeocode(mapLat, mapLng)
-    setAddress(addr)
-    setCoords({ lat: mapLat, lng: mapLng })
-    setLoading(false)
+  const style: React.CSSProperties = {
+    position:   'fixed',
+    top:        0,
+    left:       0,
+    right:      0,
+    bottom:     0,
+    width:      '100%',
+    height:     '100%',
+    zIndex:     2147483647, // max z-index
+    background: '#111',
+    display:    'flex',
+    flexDirection: 'column',
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
   }
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      zIndex: 99999,
-      background: 'var(--bg)',
-      display: 'flex', flexDirection: 'column',
-    }}>
+    <div style={style}>
       {/* Header */}
       <div style={{
-        padding: '12px 16px',
-        background: 'var(--surface)',
-        display: 'flex', alignItems: 'center', gap: 10,
-        borderBottom: '1px solid var(--border)',
-        flexShrink: 0,
+        padding:      '12px 16px',
+        background:   '#1C1C1C',
+        display:      'flex',
+        alignItems:   'center',
+        gap:          10,
+        borderBottom: '1px solid #333',
+        flexShrink:   0,
       }}>
         <button onClick={onClose} style={{
           width: 36, height: 36, borderRadius: '50%',
-          background: 'var(--surface-2)', border: 'none',
-          color: 'var(--text-primary)', fontSize: 20, cursor: 'pointer',
+          background: '#252525', border: 'none',
+          color: '#fff', fontSize: 20, cursor: 'pointer',
+          flexShrink: 0,
         }}>←</button>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 17, color: 'var(--text-primary)' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: 18, color: '#fff' }}>
             Manzilni tanlang
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)' }}>
             GPS yoki qo'lda kiriting
           </div>
         </div>
         <button onClick={detectGPS} disabled={gpsLoading} style={{
-          padding: '7px 12px', borderRadius: 10,
-          background: gpsLoading ? 'var(--surface-2)' : '#F5C800',
-          border: 'none', color: gpsLoading ? 'var(--text-muted)' : '#1A1A1A',
-          fontSize: 12, fontWeight: 700, cursor: 'pointer',
-          fontFamily: "var(--font-body)", whiteSpace: 'nowrap',
+          padding:    '8px 14px',
+          borderRadius: 10,
+          background: gpsLoading ? '#252525' : '#F5C800',
+          border:     'none',
+          color:      gpsLoading ? 'rgba(255,255,255,.4)' : '#1A1A1A',
+          fontSize:   12,
+          fontWeight: 700,
+          cursor:     'pointer',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
         }}>
           {gpsLoading ? '⏳' : '📡 GPS'}
         </button>
       </div>
 
-      {/* Map iframe */}
-      <div style={{ flex: 1, position: 'relative', background: '#1a2a1a' }}>
+      {/* Map */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         <iframe
-          key={`${mapLat}-${mapLng}-${zoom}`}
+          key={`${coords.lat}-${coords.lng}`}
           src={embedUrl}
-          style={{ width: '100%', height: '100%', border: 'none' }}
+          style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
           allowFullScreen
           loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
         />
-
-        {/* Center crosshair */}
+        {/* Center pin */}
         <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -100%)',
-          fontSize: 32, pointerEvents: 'none',
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))',
+          position:       'absolute',
+          top:            '50%',
+          left:           '50%',
+          transform:      'translate(-50%, -100%)',
+          fontSize:       36,
+          pointerEvents:  'none',
+          filter:         'drop-shadow(0 3px 6px rgba(0,0,0,.6))',
+          marginTop:      -4,
         }}>📍</div>
 
-        {/* Use this location button */}
-        <button onClick={handleUseCurrentView} style={{
-          position: 'absolute', top: 12, right: 12,
-          padding: '8px 14px', borderRadius: 10,
-          background: '#1A1A1A', border: '2px solid #F5C800',
-          color: '#F5C800', fontSize: 12, fontWeight: 700,
-          cursor: 'pointer', fontFamily: "var(--font-body)",
-        }}>
-          📍 Shu joyni tanlash
-        </button>
-
-        {/* Address display */}
+        {/* Address bubble */}
         <div style={{
-          position: 'absolute', bottom: 16, left: 16, right: 16,
-          background: 'rgba(0,0,0,.85)', borderRadius: 14,
-          padding: '10px 14px', fontSize: 13,
-          color: loading ? 'rgba(255,255,255,.5)' : '#fff',
+          position:   'absolute',
+          bottom:     16,
+          left:       16,
+          right:      16,
+          background: 'rgba(0,0,0,.88)',
+          borderRadius: 14,
+          padding:    '10px 14px',
+          fontSize:   13,
+          color:      loading ? 'rgba(255,255,255,.4)' : '#fff',
+          border:     `1.5px solid ${address ? '#F5C800' : 'rgba(255,255,255,.15)'}`,
           backdropFilter: 'blur(8px)',
-          border: `1.5px solid ${address ? '#F5C800' : 'rgba(255,255,255,.2)'}`,
         }}>
-          {loading ? '📍 Manzil aniqlanmoqda...' : address || '👆 "Shu joyni tanlash" ni bosing'}
+          {loading
+            ? '📍 Manzil aniqlanmoqda...'
+            : address || '👆 GPS bosing yoki quyida manzil kiriting'}
         </div>
       </div>
 
-      {/* Manual address input */}
+      {/* Input + confirm */}
       <div style={{
-        padding: '10px 16px',
-        background: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
+        padding:    '10px 16px 16px',
+        background: '#1C1C1C',
+        borderTop:  '1px solid #333',
         flexShrink: 0,
       }}>
         <input
           value={address}
           onChange={e => setAddress(e.target.value)}
-          placeholder="Yoki manzilni qo'lda kiriting..."
+          placeholder="Ko'cha, uy raqami, mo'ljal..."
           style={{
-            width: '100%', padding: '10px 14px',
-            borderRadius: 12, background: 'var(--surface-2)',
-            border: '1.5px solid var(--border)',
-            color: 'var(--text-primary)', fontSize: 14,
-            fontFamily: "var(--font-body)",
-            outline: 'none', boxSizing: 'border-box',
+            width:        '100%',
+            padding:      '10px 14px',
+            borderRadius: 12,
+            background:   '#252525',
+            border:       '1.5px solid #333',
+            color:        '#fff',
+            fontSize:     14,
+            outline:      'none',
+            boxSizing:    'border-box',
             marginBottom: 10,
           }}
         />
@@ -184,23 +195,34 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
           disabled={!address || loading}
           onClick={() => address && !loading && onSelect(address, coords)}
           style={{
-            width: '100%', padding: 14, borderRadius: 14,
-            background: (address && !loading) ? '#F5C800' : 'var(--surface-2)',
-            border: 'none',
-            color: (address && !loading) ? '#1A1A1A' : 'var(--text-muted)',
-            fontSize: 15, fontWeight: 700,
-            cursor: (address && !loading) ? 'pointer' : 'not-allowed',
-            fontFamily: "var(--font-body)",
+            width:        '100%',
+            padding:      14,
+            borderRadius: 14,
+            background:   (address && !loading) ? '#F5C800' : '#252525',
+            border:       'none',
+            color:        (address && !loading) ? '#1A1A1A' : 'rgba(255,255,255,.3)',
+            fontSize:     15,
+            fontWeight:   700,
+            cursor:       (address && !loading) ? 'pointer' : 'not-allowed',
           }}
         >
-          ✅ Shu manzilni tasdiqlash
+          ✅ Tasdiqlash
         </button>
       </div>
     </div>
   )
 }
 
+// Portal to #root element for Telegram compatibility
 export default function MapPicker(props: Props) {
-  if (typeof document === 'undefined') return null
-  return createPortal(<MapPickerContent {...props} />, document.body)
+  const [container, setContainer] = useState<Element | null>(null)
+
+  useEffect(() => {
+    // Try #root first, then body
+    const root = document.getElementById('root') || document.body
+    setContainer(root)
+  }, [])
+
+  if (!container) return null
+  return createPortal(<MapPickerContent {...props} />, container)
 }
