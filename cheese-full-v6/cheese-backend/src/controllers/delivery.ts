@@ -4,7 +4,7 @@ const CAFE_LAT = 38.853373449716344
 const CAFE_LNG = 65.7889651753182
 const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY || ''
 
-// Fallback: Haversine formula
+// Haversine fallback
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R    = 6371
   const dLat = (lat2 - lat1) * Math.PI / 180
@@ -17,42 +17,58 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 100) / 100
 }
 
-// Google Distance Matrix API — haqiqiy yo'l masofasi
+// Google Distance Matrix API
 async function getRealDistance(userLat: number, userLng: number): Promise<number> {
   if (!MAPS_KEY) throw new Error('No API key')
 
-  const url = `https://maps.googleapis.com/maps/api/distancematrix/json` +
+  const url =
+    `https://maps.googleapis.com/maps/api/distancematrix/json` +
     `?origins=${CAFE_LAT},${CAFE_LNG}` +
     `&destinations=${userLat},${userLng}` +
     `&mode=driving` +
     `&key=${MAPS_KEY}`
 
   const res  = await fetch(url)
-  const data = await res.json()
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
-  if (data.status !== 'OK') throw new Error(`API error: ${data.status}`)
+  const data = await res.json() as any
 
-  const element = data.rows?.[0]?.elements?.[0]
-  if (element?.status !== 'OK') throw new Error(`Element error: ${element?.status}`)
+  // Log for debugging
+  console.log('[Delivery] Distance Matrix response status:', data.status)
 
-  // meters → km, 2 decimal
+  if (data.status !== 'OK') {
+    throw new Error(`API status: ${data.status} — ${data.error_message || ''}`)
+  }
+
+  const row     = data.rows?.[0]
+  const element = row?.elements?.[0]
+
+  console.log('[Delivery] Element status:', element?.status)
+
+  if (!element || element.status !== 'OK') {
+    throw new Error(`Element status: ${element?.status || 'undefined'}`)
+  }
+
+  if (!element.distance?.value) {
+    throw new Error('No distance value in response')
+  }
+
   return Math.round(element.distance.value / 10) / 100
 }
 
-// Delivery fee formula:
-// 0-1km    → 5,000 so'm
-// +500m    → +1,000 so'm
+// Fee formula: 0-1km = 5000, +1000 per 500m
 function calcDeliveryFee(km: number): number {
   if (km <= 1) return 5000
-  const extra500m = Math.ceil((km - 1) / 0.5)
-  return 5000 + extra500m * 1000
+  return 5000 + Math.ceil((km - 1) / 0.5) * 1000
 }
 
 // POST /api/delivery/calculate-fee
 export async function calculateFee(req: FastifyRequest, reply: FastifyReply) {
-  const { lat, lng } = req.body as { lat: number; lng: number }
+  const body = req.body as any
+  const lat  = Number(body?.lat)
+  const lng  = Number(body?.lng)
 
-  if (typeof lat !== 'number' || typeof lng !== 'number') {
+  if (isNaN(lat) || isNaN(lng)) {
     return reply.code(400).send({ ok: false, error: 'lat va lng kerak' })
   }
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
@@ -63,10 +79,10 @@ export async function calculateFee(req: FastifyRequest, reply: FastifyReply) {
   let method = 'driving'
 
   try {
-    // Haqiqiy yo'l masofasi
     distance = await getRealDistance(lat, lng)
-  } catch {
-    // Fallback — to'g'ri chiziq
+    console.log(`[Delivery] Real distance: ${distance} km`)
+  } catch (e: any) {
+    console.warn(`[Delivery] Fallback to Haversine: ${e.message}`)
     distance = haversineKm(CAFE_LAT, CAFE_LNG, lat, lng)
     method   = 'straight'
   }
