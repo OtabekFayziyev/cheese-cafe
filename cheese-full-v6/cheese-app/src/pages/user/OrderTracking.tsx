@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Phone, MessageCircle, MapPin,
@@ -24,7 +24,6 @@ const STATUS_STEPS: { key: OrderStatus; label: string; icon: React.ReactNode }[]
 
 const STATUS_ORDER = STATUS_STEPS.map(s => s.key)
 
-// Elapsed timer hook
 function useElapsed(date?: string) {
   const [elapsed, setElapsed] = useState('')
   useEffect(() => {
@@ -43,13 +42,13 @@ function useElapsed(date?: string) {
 }
 
 export default function OrderTracking() {
-  const navigate        = useNavigate()
-  const { fmt }         = useFormat()
-  const { haptic }      = useTelegram()
-  const activeOrder     = useOrderStore(s => s.activeOrder)
-  const orderHistory    = useOrderStore(s => s.orderHistory)
-  const setActiveOrder  = useOrderStore(s => s.setActiveOrder)
-  const elapsed         = useElapsed(activeOrder?.createdAt)
+  const navigate       = useNavigate()
+  const { fmt }        = useFormat()
+  const { haptic }     = useTelegram()
+  const activeOrder    = useOrderStore(s => s.activeOrder)
+  const orderHistory   = useOrderStore(s => s.orderHistory)
+  const setActiveOrder = useOrderStore(s => s.setActiveOrder)
+  const elapsed        = useElapsed(activeOrder?.createdAt)
 
   // Poll real order status every 5s
   useEffect(() => {
@@ -68,31 +67,28 @@ export default function OrderTracking() {
   }, [activeOrder?.id])
 
   // Real courier location
-  const [courierLoc, setCourierLoc] = useState<{lat:number,lng:number}|null>(null)
-  const [courierInfo, setCourierInfo] = useState<{name:string,phone:string}|null>(null)
+  const [courierLoc,  setCourierLoc]  = useState<{ lat: number; lng: number } | null>(null)
+  const [courierInfo, setCourierInfo] = useState<{ name: string; phone: string } | null>(null)
 
   useEffect(() => {
-    if (!activeOrder?.courierId || activeOrder?.status !== 'on_the_way') return
-
-    const pollLocation = async () => {
+    if (!(activeOrder as any)?.courierId || activeOrder?.status !== 'on_the_way') return
+    const poll = async () => {
       try {
-        const loc = await ordersAPI.getCourierLocation(String(activeOrder.courierId))
+        const loc = await ordersAPI.getCourierLocation(String((activeOrder as any).courierId))
         if (loc?.lat && loc?.lng) {
-          setCourierLoc({ lat: loc.lat, lng: loc.lng })
-          setCourierInfo({ 
+          setCourierLoc({ lat: Number(loc.lat), lng: Number(loc.lng) })
+          setCourierInfo({
             name:  loc.firstName || 'Kuryer',
-            phone: loc.phone     || ''
+            phone: loc.phone     || '',
           })
         }
       } catch {}
     }
-
-    pollLocation()
-    const t = setInterval(pollLocation, 30000) // har 30s
+    poll()
+    const t = setInterval(poll, 30000)
     return () => clearInterval(t)
-  }, [activeOrder?.courierId, activeOrder?.status])
+  }, [(activeOrder as any)?.courierId, activeOrder?.status])
 
-  // Use most recent order if no active
   const order = activeOrder || orderHistory[0]
 
   if (!order) {
@@ -110,10 +106,13 @@ export default function OrderTracking() {
     )
   }
 
-  const currentIdx   = STATUS_ORDER.indexOf(order.status as OrderStatus)
-  const isDelivered  = order.status === 'delivered'
-  const isCancelled  = order.status === 'cancelled'
-  const isOnTheWay   = order.status === 'on_the_way'
+  const currentIdx  = STATUS_ORDER.indexOf(order.status as OrderStatus)
+  const isDelivered = order.status === 'delivered'
+  const isCancelled = order.status === 'cancelled'
+  const isOnTheWay  = order.status === 'on_the_way'
+
+  const courierName  = courierInfo?.name  || (order as any)?.courier?.firstName || 'Kuryer'
+  const courierPhone = courierInfo?.phone || (order as any)?.courier?.phone     || ''
 
   return (
     <AppShell showNav={false}>
@@ -134,11 +133,11 @@ export default function OrderTracking() {
 
       <div className={styles.body}>
 
-        {/* Status card */}
+        {/* Status steps */}
         {!isCancelled && (
           <div className={styles.statusCard}>
             <div className={styles.statusTitle}>
-              {isDelivered ? '🎉 Yetkazildi!' : isOnTheWay ? '🛵 Kuryer yo\'lda' : '⏳ Buyurtma jarayonda'}
+              {isDelivered ? '🎉 Yetkazildi!' : isOnTheWay ? "🛵 Kuryer yo'lda" : '⏳ Buyurtma jarayonda'}
             </div>
             <div className={styles.statusSteps}>
               {STATUS_STEPS.filter(s => s.key !== 'cancelled').map((step, idx) => {
@@ -162,7 +161,7 @@ export default function OrderTracking() {
           </div>
         )}
 
-        {/* Courier live map (when on the way) */}
+        {/* Courier map — only when on_the_way */}
         {isOnTheWay && (
           <div className={styles.mapCard}>
             <div className={styles.mapTitle}>
@@ -170,47 +169,52 @@ export default function OrderTracking() {
               Kuryer joylashuvi
               <span className={styles.liveBadge}>LIVE</span>
             </div>
-            <div className={styles.mapStub}>
-              {/* Grid */}
-              <svg className={styles.mapGrid} viewBox="0 0 100 100" preserveAspectRatio="none">
-                {[20,40,60,80].map(v => (
-                  <React.Fragment key={v}>
-                    <line x1={v} y1="0" x2={v} y2="100" stroke="rgba(255,255,255,.07)" strokeWidth=".5"/>
-                    <line x1="0" y1={v} x2="100" y2={v} stroke="rgba(255,255,255,.07)" strokeWidth=".5"/>
-                  </React.Fragment>
-                ))}
-                <path d="M0 50 Q30 40 50 50 Q70 60 100 50" stroke="rgba(255,255,255,.18)" strokeWidth="1.5" fill="none"/>
-                <path d="M50 0 Q45 30 50 50 Q55 70 50 100" stroke="rgba(255,255,255,.12)" strokeWidth="1" fill="none"/>
-              </svg>
-              {/* Courier dot */}
-              <div className={styles.courierDot}
-                style={{ left:`${courierPos.x}%`, top:`${courierPos.y}%` }}>
-                <div className={styles.courierEmoji}>🛵</div>
-                <div className={styles.courierRing} />
-              </div>
-              {/* Destination */}
-              <div className={styles.destPin} style={{ left:'72%', top:'62%' }}>
-                <MapPin size={20} color="#F5C800" fill="rgba(245,200,0,.3)" />
-              </div>
-              <div className={styles.mapEta}>⏱ ~12 daqiqa qoldi</div>
+
+            {/* Map */}
+            <div style={{ height: 180, borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
+              {courierLoc ? (
+                <CourierMap
+                  courierLat={courierLoc.lat}
+                  courierLng={courierLoc.lng}
+                  orderLat={(order as any).lat}
+                  orderLng={(order as any).lng}
+                />
+              ) : (
+                <div style={{
+                  height: '100%', background: '#1a2a1a',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}>
+                  <div style={{ fontSize: 36 }}>🛵</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>
+                    Kuryer joylashuvi aniqlanmoqda...
+                  </div>
+                </div>
+              )}
             </div>
+
             {/* Courier info */}
             <div className={styles.courierInfo}>
               <div className={styles.courierAva}>🛵</div>
               <div className={styles.courierDetails}>
-                <div className={styles.courierName}>{courierInfo?.name || (activeOrder as any)?.courier?.firstName || "Kuryer yo'lda"}</div>
+                <div className={styles.courierName}>{courierName}</div>
                 <div className={styles.courierRating}>
-                  <Star size={12} fill="#F5C800" color="#F5C800" /> 4.9 · 234 ta yetkazma
+                  <Star size={12} fill="#F5C800" color="#F5C800" /> 4.9
                 </div>
               </div>
-              <button className={styles.courierCallBtn} onClick={() => { const phone = courierInfo?.phone || (activeOrder as any)?.courier?.phone; if(phone) window.open(`tel:${phone}`) }}>
-                <Phone size={18} />
-              </button>
+              {courierPhone && (
+                <button
+                  className={styles.courierCallBtn}
+                  onClick={() => window.open(`tel:${courierPhone}`)}
+                >
+                  <Phone size={18} />
+                </button>
+              )}
             </div>
           </div>
         )}
 
-        {/* Order details */}
+        {/* Order items */}
         <div className={styles.detailCard}>
           <div className={styles.detailTitle}>📋 Buyurtma tarkibi</div>
           {(order.items || []).map((item: any, idx: number) => (
@@ -241,19 +245,28 @@ export default function OrderTracking() {
           </div>
         </div>
 
-        {/* Contact buttons */}
+        {/* Contact */}
         <div className={styles.contactBtns}>
-          <a href="tel:+998901234567" className={styles.contactBtn}>
-            <Phone size={20} />
-            <span>Kuryer bilan bog'lanish</span>
-          </a>
-          <button className={clsx(styles.contactBtn, styles.contactBtnSecondary)} onClick={() => { const tg = (window as any).Telegram?.WebApp; if(tg?.openTelegramLink) tg.openTelegramLink('https://t.me/cheese_cafe'); else window.open('https://t.me/cheese_cafe', '_blank') }}>
+          {courierPhone && (
+            <a href={`tel:${courierPhone}`} className={styles.contactBtn}>
+              <Phone size={20} />
+              <span>Kuryer bilan bog'lanish</span>
+            </a>
+          )}
+          <button
+            className={clsx(styles.contactBtn, styles.contactBtnSecondary)}
+            onClick={() => {
+              const tg = (window as any).Telegram?.WebApp
+              if (tg?.openTelegramLink) tg.openTelegramLink('https://t.me/cheese_cafe')
+              else window.open('https://t.me/cheese_cafe', '_blank')
+            }}
+          >
             <MessageCircle size={20} />
             <span>Restoran bilan bog'lanish</span>
           </button>
         </div>
 
-        {/* Delivered state */}
+        {/* Delivered */}
         {isDelivered && (
           <div className={styles.deliveredCard}>
             <div className={styles.deliveredTitle}>🎉 Taomingizdan zavqlaning!</div>
@@ -264,23 +277,27 @@ export default function OrderTracking() {
                 </button>
               ))}
             </div>
-            <button className={styles.reorderBtn}
-              onClick={() => { haptic.light(); navigate('/user') }}>
+            <button
+              className={styles.reorderBtn}
+              onClick={() => { haptic.light(); navigate('/user') }}
+            >
               <RotateCcw size={16} />
               Qayta buyurtma
             </button>
           </div>
         )}
 
-        {/* Cancelled state */}
+        {/* Cancelled */}
         {isCancelled && (
           <div className={styles.cancelledCard}>
             <div className={styles.cancelledTitle}>❌ Buyurtma bekor qilindi</div>
             <div className={styles.cancelledSub}>
-              {(order as any).cancelReason || 'Sabab: noma\'lum'}
+              {(order as any).cancelReason || "Sabab: noma'lum"}
             </div>
-            <button className={styles.reorderBtn}
-              onClick={() => { haptic.light(); navigate('/user') }}>
+            <button
+              className={styles.reorderBtn}
+              onClick={() => { haptic.light(); navigate('/user') }}
+            >
               Qayta buyurtma berish
             </button>
           </div>
@@ -292,38 +309,38 @@ export default function OrderTracking() {
   )
 }
 
-// ── Real Courier Map Component ──
-function CourierMapView({ courierLat, courierLng, orderLat, orderLng }: {
-  courierLat: number; courierLng: number;
-  orderLat?: number; orderLng?: number;
+// ── Courier Map ──
+function CourierMap({ courierLat, courierLng, orderLat, orderLng }: {
+  courierLat: number
+  courierLng: number
+  orderLat?:  number
+  orderLng?:  number
 }) {
-  const mapDiv = React.useRef<HTMLDivElement>(null)
-  const mapObj = React.useRef<any>(null)
-  const courierMarker = React.useRef<any>(null)
+  const divRef        = useRef<HTMLDivElement>(null)
+  const mapRef        = useRef<any>(null)
+  const courierMarker = useRef<any>(null)
 
-  React.useEffect(() => {
+  useEffect(() => {
     const init = () => {
-      if (!mapDiv.current || mapObj.current) return
+      if (!divRef.current || mapRef.current) return
       const L = (window as any).L
       if (!L) return
 
-      const map = L.map(mapDiv.current, {
+      const map = L.map(divRef.current, {
         center: [courierLat, courierLng],
         zoom: 15,
         zoomControl: false,
         attributionControl: false,
       })
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
 
-      // Courier marker
       const cIcon = L.divIcon({
         className: '',
-        html: '<div style="font-size:28px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))">🛵</div>',
+        html: '<div style="font-size:28px">🛵</div>',
         iconSize: [28, 28], iconAnchor: [14, 14],
       })
       courierMarker.current = L.marker([courierLat, courierLng], { icon: cIcon }).addTo(map)
 
-      // Order destination marker
       if (orderLat && orderLng) {
         const dIcon = L.divIcon({
           className: '',
@@ -333,7 +350,7 @@ function CourierMapView({ courierLat, courierLng, orderLat, orderLng }: {
         L.marker([orderLat, orderLng], { icon: dIcon }).addTo(map)
       }
 
-      mapObj.current = map
+      mapRef.current = map
     }
 
     if (!document.getElementById('leaflet-css')) {
@@ -350,17 +367,19 @@ function CourierMapView({ courierLat, courierLng, orderLat, orderLng }: {
       s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
       s.onload = () => setTimeout(init, 50)
       document.head.appendChild(s)
+    } else {
+      const t = setInterval(() => {
+        if ((window as any).L) { clearInterval(t); init() }
+      }, 100)
+      setTimeout(() => clearInterval(t), 8000)
     }
   }, [])
 
-  // Update courier position
-  React.useEffect(() => {
-    if (!courierMarker.current || !mapObj.current) return
+  useEffect(() => {
+    if (!courierMarker.current || !mapRef.current) return
     courierMarker.current.setLatLng([courierLat, courierLng])
-    mapObj.current.setView([courierLat, courierLng], 15)
+    mapRef.current.setView([courierLat, courierLng], 15)
   }, [courierLat, courierLng])
 
-  return (
-    <div ref={mapDiv} style={{ width: '100%', height: '100%', minHeight: 180 }} />
-  )
+  return <div ref={divRef} style={{ width: '100%', height: '100%' }} />
 }
