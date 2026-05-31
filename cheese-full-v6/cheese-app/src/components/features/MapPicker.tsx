@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Loader } from '@googlemaps/js-api-loader'
 
 const MAPS_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''
 
@@ -10,17 +9,37 @@ interface Props {
   initial?: { lat: number; lng: number }
 }
 
-const loader = new Loader({
-  apiKey:    MAPS_KEY,
-  version:   'weekly',
-  libraries: ['maps', 'marker', 'geocoding'],
-})
+// Load Google Maps script once
+let mapsLoaded = false
+let mapsLoading = false
+const mapsCallbacks: (() => void)[] = []
+
+function loadGoogleMaps(callback: () => void) {
+  if (mapsLoaded) { callback(); return }
+  mapsCallbacks.push(callback)
+  if (mapsLoading) return
+  mapsLoading = true
+
+  const script = document.createElement('script')
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=geocoder&language=uz&v=weekly`
+  script.async = true
+  script.defer = true
+  script.onload = () => {
+    mapsLoaded = true
+    mapsLoading = false
+    mapsCallbacks.forEach(cb => cb())
+    mapsCallbacks.length = 0
+  }
+  script.onerror = () => {
+    mapsLoading = false
+  }
+  document.head.appendChild(script)
+}
 
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
-    const { Geocoder } = await loader.importLibrary('geocoding') as any
-    const geocoder = new Geocoder()
-    const result   = await geocoder.geocode({ location: { lat, lng } })
+    const geocoder = new (window as any).google.maps.Geocoder()
+    const result = await geocoder.geocode({ location: { lat, lng } })
     if (result.results[0]) return result.results[0].formatted_address
   } catch {}
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
@@ -28,7 +47,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
 
 function MapPickerContent({ onSelect, onClose, initial }: Props) {
   const mapElRef  = useRef<HTMLDivElement>(null)
-  const mapRef    = useRef<google.maps.Map | null>(null)
+  const mapRef    = useRef<any>(null)
   const markerRef = useRef<any>(null)
 
   const [address,    setAddress]    = useState('')
@@ -39,31 +58,29 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
   const [error,      setError]      = useState('')
 
   useEffect(() => {
-    if (!mapElRef.current) return
+    loadGoogleMaps(() => {
+      if (!mapElRef.current) return
+      const google = (window as any).google
 
-    loader.importLibrary('maps').then(async ({ Map }: any) => {
-      const map = new Map(mapElRef.current!, {
+      const map = new google.maps.Map(mapElRef.current, {
         center:           coords,
         zoom:             15,
         disableDefaultUI: true,
         zoomControl:      true,
         gestureHandling:  'greedy',
-        mapId:            'CHEESE_CAFE_MAP',
       })
       mapRef.current = map
-      setMapReady(true)
 
-      // Marker
-      const { AdvancedMarkerElement } = await loader.importLibrary('marker') as any
-      const marker = new AdvancedMarkerElement({
+      const marker = new google.maps.Marker({
         map,
         position:  coords,
-        gmpDraggable: true,
+        draggable: true,
       })
       markerRef.current = marker
+      setMapReady(true)
 
       const onPick = async (lat: number, lng: number) => {
-        marker.position = { lat, lng }
+        marker.setPosition({ lat, lng })
         setCoords({ lat, lng })
         setLoading(true)
         const addr = await reverseGeocode(lat, lng)
@@ -71,21 +88,18 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
         setLoading(false)
       }
 
-      map.addListener('click', (e: google.maps.MapMouseEvent) => {
-        if (!e.latLng) return
+      map.addListener('click', (e: any) => {
         onPick(e.latLng.lat(), e.latLng.lng())
       })
 
       marker.addListener('dragend', () => {
-        const pos = marker.position as google.maps.LatLng
+        const pos = marker.getPosition()
         onPick(pos.lat(), pos.lng())
       })
 
       if (initial) {
         reverseGeocode(initial.lat, initial.lng).then(setAddress)
       }
-    }).catch((e: any) => {
-      setError('Xarita yuklanmadi: ' + (e?.message || 'Noma\'lum xato'))
     })
   }, [])
 
@@ -101,7 +115,7 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
         const lng = pos.coords.longitude
         mapRef.current?.setCenter({ lat, lng })
         mapRef.current?.setZoom(16)
-        if (markerRef.current) markerRef.current.position = { lat, lng }
+        markerRef.current?.setPosition({ lat, lng })
         setCoords({ lat, lng })
         setLoading(true)
         setGpsLoading(false)
@@ -139,7 +153,7 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
           color: 'var(--text-primary)', fontSize: 20, cursor: 'pointer',
         }}>←</button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily:"var(--font-display)", fontSize: 17, color: 'var(--text-primary)' }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 17, color: 'var(--text-primary)' }}>
             Manzilni tanlang
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
@@ -169,24 +183,9 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
             background: '#0d1a0d', gap: 12,
           }}>
             <div style={{ fontSize: 48 }}>🗺️</div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,.6)' }}>Xarita yuklanmoqda...</div>
-          </div>
-        )}
-
-        {error && (
-          <div style={{
-            position: 'absolute', inset: 0,
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            background: 'var(--surface)', gap: 12, padding: 20,
-          }}>
-            <div style={{ fontSize: 40 }}>⚠️</div>
-            <div style={{ fontSize: 14, color: 'var(--red)', textAlign: 'center' }}>{error}</div>
-            <button onClick={onClose} style={{
-              padding: '10px 20px', borderRadius: 10, background: 'var(--surface-2)',
-              border: '1.5px solid var(--border)', color: 'var(--text-primary)',
-              fontSize: 14, cursor: 'pointer',
-            }}>Yopish</button>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,.6)' }}>
+              Xarita yuklanmoqda...
+            </div>
           </div>
         )}
 
