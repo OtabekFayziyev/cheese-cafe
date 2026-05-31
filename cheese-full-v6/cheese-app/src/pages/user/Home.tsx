@@ -255,23 +255,14 @@ export default function Home() {
       )}
 
       {showLocModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowLocModal(false)}>
-          <div className={styles.modalSheet} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalHandle} />
-            <h3 className={styles.modalTitle}>📍 Joylashuvni belgilash</h3>
-            <div className={styles.mapStub}>
-              <div className={styles.mapPin}>📍</div>
-              <div className={styles.mapLabel}>Xaritada manzilni bosing</div>
-            </div>
-            <input className={styles.mapInput} defaultValue={address || ''}
-              placeholder="Ko'cha, uy raqami, mo'ljal..." />
-            <input className={styles.mapInput} placeholder="Qo'shimcha: xonadon, qavat..." />
-            <button className={styles.mapConfirm}
-              onClick={() => { setShowLocModal(false); toast.success('✅ Manzil saqlandi') }}>
-              ✅ Tasdiqlash
-            </button>
-          </div>
-        </div>
+        <MapPicker
+          initial={coords || undefined}
+          onClose={() => setShowLocModal(false)}
+          onSelect={(addr) => {
+            setShowLocModal(false)
+            toast.success('✅ Manzil saqlandi')
+          }}
+        />
       )}
 
       {notifOpen && (
