@@ -43,9 +43,11 @@ export default function Cart() {
   const [payMethod,    setPayMethod]    = useState<PaymentType>('cash')
   const [cashNotice,   setCashNotice]   = useState(false)
   const [placing,      setPlacing]      = useState(false)
-  const [showMap, setShowMap] = useState(false)
+  const [showMap,      setShowMap]      = useState(false)
   const [showRestNote, setShowRestNote] = useState(false)
   const [restNote,     setRestNote]     = useState('')
+  const [ordering,     setOrdering]     = useState(false)
+  const [distance,     setDistance]     = useState('')
 
   useEffect(() => {
     if (gpsAddress && !addrInput) setAddrInput(gpsAddress)
