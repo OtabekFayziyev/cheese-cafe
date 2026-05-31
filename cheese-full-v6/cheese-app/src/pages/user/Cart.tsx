@@ -51,6 +51,27 @@ export default function Cart() {
     if (gpsAddress && !addrInput) setAddrInput(gpsAddress)
   }, [gpsAddress])
 
+  // Backend dan yetkazish narxini hisoblash
+  useEffect(() => {
+    if (!coords || deliveryType !== 'delivery') {
+      if (deliveryType === 'pickup') setDeliveryFee(0)
+      return
+    }
+    const API = (import.meta as any).env?.VITE_API_URL || ''
+    fetch(`${API}/api/delivery/calculate-fee`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ lat: coords.lat, lng: coords.lng }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok && data.data?.deliveryFee) {
+          setDeliveryFee(data.data.deliveryFee)
+        }
+      })
+      .catch(() => {})
+  }, [coords?.lat, coords?.lng, deliveryType])
+
   const handlePhone = (val: string) =>
     setSecondPhone(val.replace(/\D/g, '').slice(0, 9))
 
