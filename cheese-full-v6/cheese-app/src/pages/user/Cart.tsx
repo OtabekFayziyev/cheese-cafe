@@ -67,6 +67,7 @@ export default function Cart() {
       .then(data => {
         if (data.ok && data.data?.deliveryFee) {
           setDeliveryFee(data.data.deliveryFee)
+          setDistance(data.data.distanceText || '')
         }
       })
       .catch(() => {})
@@ -322,7 +323,10 @@ export default function Cart() {
         {/* Summary */}
         <div className={styles.summary}>
           <div className={styles.sumRow}><span>Taomlar</span><span>{fmt(subtotal())}</span></div>
-          <div className={styles.sumRow}><span>Yetkazish</span><span>{deliveryFee>0?fmt(deliveryFee):'Bepul'}</span></div>
+          <div className={styles.sumRow}>
+              <span>Yetkazish {distance ? <span style={{fontSize:11,color:'var(--text-muted)',fontWeight:400}}>({distance})</span> : ''}</span>
+              <span>{deliveryFee>0?fmt(deliveryFee):'Bepul'}</span>
+            </div>
           {discount>0 && <div className={clsx(styles.sumRow,styles.sumDiscount)}><span>Chegirma</span><span>−{fmt(discount)}</span></div>}
           <div className={clsx(styles.sumRow,styles.sumTotal)}><span>Jami</span><span>{fmt(total())}</span></div>
         </div>
