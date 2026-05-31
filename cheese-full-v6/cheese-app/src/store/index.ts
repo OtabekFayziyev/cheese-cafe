@@ -59,10 +59,12 @@ export const useCartStore = create<CartState>()(
       applyPromo: (code, discount) => set({ promoCode: code, discount }),
       clearPromo: () => set({ promoCode: null, discount: 0 }),
 
-      setDeliveryType: (type) => set({
+      setDeliveryType: (type) => set(s => ({
         deliveryType: type,
-        deliveryFee: type === 'pickup' ? 0 : 5000,
-      }),
+        deliveryFee: type === 'pickup' ? 0 : s.deliveryFee || 5000,
+      })),
+
+      setDeliveryFee: (fee: number) => set({ deliveryFee: fee }),
 
       clear: () => set({ items: [], promoCode: null, discount: 0 }),
 
