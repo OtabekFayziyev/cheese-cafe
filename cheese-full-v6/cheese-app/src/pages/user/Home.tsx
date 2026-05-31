@@ -11,6 +11,7 @@ import { AppShell, Page, SectionHeader } from '@/components/layout/AppShell'
 import { MenuCard } from '@/components/features/MenuCard'
 import { FoodModal } from '@/components/features/FoodModal'
 import { Badge } from '@/components/ui'
+import MapPicker from '@/components/features/MapPicker'
 import type { MenuItem } from '@/types'
 import styles from './Home.module.css'
 
@@ -32,7 +33,7 @@ export default function Home() {
   useColorScheme()
 
   const { isOpen, openTime, closeTime } = useWorkHours()
-  const { address, loading: locLoading }  = useLocation()
+  const { address, coords, loading: locLoading }  = useLocation()
   const user         = useUserStore(s => s.user)
   const activeOrder  = useOrderStore(s => s.activeOrder)
   const displayName  = tgUser?.first_name || user?.firstName || ''
