@@ -122,6 +122,9 @@ export default function Cart() {
         secondPhone:  secondPhone ? `+998${secondPhone}` : undefined,
         promoCode:    promoCode || undefined,
         note:         restNote || undefined,
+        deliveryFee:  deliveryFee,
+        lat:          coords?.lat,
+        lng:          coords?.lng,
       }
       const realOrder = await ordersAPI.create(orderData)
       setActiveOrder(realOrder)

@@ -18,12 +18,35 @@ export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
     address, addressDetail, lat, lng,
     phone, secondPhone,
     promoCode, note,
+    deliveryFee: clientDeliveryFee,
   } = body
 
   if (!items?.length) return reply.code(400).send(err('Savat bo\'sh'))
 
   let subtotal    = 0
-  let deliveryFee = deliveryType === 'PICKUP' ? 0 : 5000
+  // Yetkazish narxi: frontenddan kelgan yoki backend da qayta hisoblanadi
+  let deliveryFee = 0
+  if (deliveryType === 'PICKUP') {
+    deliveryFee = 0
+  } else if (clientDeliveryFee && typeof clientDeliveryFee === 'number' && clientDeliveryFee > 0) {
+    deliveryFee = clientDeliveryFee
+  } else if (lat && lng) {
+    // Backend da qayta hisoblash (Distance Matrix fallback)
+    try {
+      const CAFE_LAT = 38.853373449716344
+      const CAFE_LNG = 65.7889651753182
+      const R    = 6371
+      const dLat = (lat - CAFE_LAT) * Math.PI / 180
+      const dLng = (lng - CAFE_LNG) * Math.PI / 180
+      const a    = Math.sin(dLat/2)**2 + Math.cos(CAFE_LAT*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLng/2)**2
+      const km   = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 100) / 100
+      deliveryFee = km <= 1 ? 5000 : 5000 + Math.ceil((km-1)/0.5) * 1000
+    } catch {
+      deliveryFee = 5000
+    }
+  } else {
+    deliveryFee = 5000
+  }
   let discount    = 0
   const orderItems: any[] = []
 
