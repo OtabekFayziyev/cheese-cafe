@@ -1,15 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Loader } from '@googlemaps/js-api-loader'
-
-const MAPS_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''
-
-const loader = new Loader({
-  apiKey:    MAPS_KEY,
-  version:   'weekly',
-  language:  'uz',
-  libraries: ['maps', 'geocoding', 'marker'],
-})
 
 interface Props {
   onSelect: (address: string, coords: { lat: number; lng: number }) => void
@@ -17,101 +7,163 @@ interface Props {
   initial?: { lat: number; lng: number }
 }
 
-async function reverseGeocode(lat: number, lng: number): Promise<string> {
+const MAPS_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''
+const DEFAULT  = { lat: 38.853373, lng: 65.788965 }
+
+async function geocode(lat: number, lng: number): Promise<string> {
+  // Nominatim — bepul, API key kerak emas
   try {
-    await loader.load()
-    const geocoder = new google.maps.Geocoder()
-    const result   = await geocoder.geocode({ location: { lat, lng } })
-    if (result.results[0]) return result.results[0].formatted_address
+    const res  = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { 'User-Agent': 'CheeseCafeApp/1.0' } }
+    )
+    const d = await res.json()
+    if (d.display_name) {
+      const p = d.display_name.split(',')
+      return p.slice(0, 4).join(',').trim()
+    }
   } catch {}
+  // Google fallback
+  if (MAPS_KEY) {
+    try {
+      const res  = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=uz`
+      )
+      const d = await res.json()
+      if (d.results?.[0]) return d.results[0].formatted_address
+    } catch {}
+  }
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
 }
 
-function MapPickerContent({ onSelect, onClose, initial }: Props) {
-  const mapElRef  = useRef<HTMLDivElement>(null)
-  const mapRef    = useRef<google.maps.Map | null>(null)
-  const markerRef = useRef<google.maps.Marker | null>(null)
+function MapContent({ onSelect, onClose, initial }: Props) {
+  const mapDiv    = useRef<HTMLDivElement>(null)
+  const mapObj    = useRef<any>(null)
+  const markerObj = useRef<any>(null)
 
-  const center = initial || { lat: 41.2995, lng: 69.2401 }
-  const [coords,     setCoords]     = useState(center)
-  const [address,    setAddress]    = useState('')
-  const [loading,    setLoading]    = useState(false)
-  const [gpsLoading, setGpsLoading] = useState(false)
-  const [mapReady,   setMapReady]   = useState(false)
-  const [error,      setError]      = useState('')
+  const start = initial || DEFAULT
+  const [coords,   setCoords]   = useState(start)
+  const [address,  setAddress]  = useState('')
+  const [addrLoad, setAddrLoad] = useState(false)
+  const [gpsLoad,  setGpsLoad]  = useState(false)
+  const [ready,    setReady]    = useState(false)
 
+  // Lock scroll
   useEffect(() => {
+    const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
+    return () => { document.body.style.overflow = prev }
   }, [])
 
+  // Load Leaflet then init map
   useEffect(() => {
-    loader.load().then(() => {
-      if (!mapElRef.current) return
+    const initMap = () => {
+      if (!mapDiv.current || mapObj.current) return
+      const L = (window as any).L
 
-      const map = new google.maps.Map(mapElRef.current, {
-        center,
+      // Init map
+      const map = L.map(mapDiv.current, {
+        center:           [start.lat, start.lng],
         zoom:             15,
-        disableDefaultUI: true,
         zoomControl:      true,
-        gestureHandling:  'greedy',
+        attributionControl: false,
       })
 
-      const marker = new google.maps.Marker({
-        map,
-        position:  center,
+      // OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map)
+
+      // Red pin marker
+      const redIcon = L.divIcon({
+        className: '',
+        html: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 36 48">
+          <path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 30 18 30S36 31.5 36 18C36 8.06 27.94 0 18 0z" fill="#EF4444"/>
+          <circle cx="18" cy="18" r="8" fill="white"/>
+          <circle cx="18" cy="18" r="5" fill="#EF4444"/>
+        </svg>`,
+        iconSize:   [36, 48],
+        iconAnchor: [18, 48],
+      })
+
+      const marker = L.marker([start.lat, start.lng], {
+        icon:      redIcon,
         draggable: true,
-      })
+      }).addTo(map)
 
-      mapRef.current    = map
-      markerRef.current = marker
-      setMapReady(true)
+      mapObj.current    = map
+      markerObj.current = marker
+      setReady(true)
 
-      const onPick = async (lat: number, lng: number) => {
-        marker.setPosition({ lat, lng })
+      const pick = async (lat: number, lng: number) => {
+        marker.setLatLng([lat, lng])
         setCoords({ lat, lng })
-        setLoading(true)
-        const addr = await reverseGeocode(lat, lng)
+        setAddrLoad(true)
+        const addr = await geocode(lat, lng)
         setAddress(addr)
-        setLoading(false)
+        setAddrLoad(false)
       }
 
-      map.addListener('click', (e: google.maps.MapMouseEvent) => {
-        if (e.latLng) onPick(e.latLng.lat(), e.latLng.lng())
+      map.on('click', (e: any) => pick(e.latlng.lat, e.latlng.lng))
+      marker.on('dragend', () => {
+        const p = marker.getLatLng()
+        pick(p.lat, p.lng)
       })
 
-      marker.addListener('dragend', () => {
-        const pos = marker.getPosition()
-        if (pos) onPick(pos.lat(), pos.lng())
+      // Initial geocode
+      geocode(start.lat, start.lng).then(addr => {
+        setAddress(addr)
       })
+    }
 
-      if (initial) reverseGeocode(initial.lat, initial.lng).then(setAddress)
+    // Load CSS
+    if (!document.getElementById('lf-css')) {
+      const link = document.createElement('link')
+      link.id    = 'lf-css'
+      link.rel   = 'stylesheet'
+      link.href  = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
 
-    }).catch(() => setError('Xarita yuklanmadi'))
+    // Load JS
+    if ((window as any).L) {
+      initMap()
+    } else if (!document.getElementById('lf-js')) {
+      const s    = document.createElement('script')
+      s.id       = 'lf-js'
+      s.src      = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+      s.onload   = initMap
+      document.head.appendChild(s)
+    } else {
+      // Script loading — wait
+      const t = setInterval(() => {
+        if ((window as any).L) { clearInterval(t); initMap() }
+      }, 100)
+      setTimeout(() => clearInterval(t), 10000)
+    }
   }, [])
 
+  // GPS detect
   const detectGPS = () => {
     if (!navigator.geolocation) { alert('GPS mavjud emas'); return }
-    setGpsLoading(true)
+    setGpsLoad(true)
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+      async pos => {
         const lat = pos.coords.latitude
         const lng = pos.coords.longitude
-        mapRef.current?.setCenter({ lat, lng })
-        mapRef.current?.setZoom(17)
-        markerRef.current?.setPosition({ lat, lng })
         setCoords({ lat, lng })
-        setGpsLoading(false)
-        setLoading(true)
-        const addr = await reverseGeocode(lat, lng)
+        setGpsLoad(false)
+        mapObj.current?.setView([lat, lng], 17)
+        markerObj.current?.setLatLng([lat, lng])
+        setAddrLoad(true)
+        const addr = await geocode(lat, lng)
         setAddress(addr)
-        setLoading(false)
+        setAddrLoad(false)
       },
-      (err) => {
-        setGpsLoading(false)
-        alert(err.code === 1
-          ? 'GPS ruxsat berilmagan. Sozlamalarda joylashuvga ruxsat bering.'
-          : 'GPS xatosi. Qayta urining.')
+      err => {
+        setGpsLoad(false)
+        if (err.code === 1) alert('GPS ruxsat berilmagan. Sozlamalarda joylashuvga ruxsat bering.')
+        else alert('GPS xatosi. Qayta urining.')
       },
       { timeout: 10000, enableHighAccuracy: true }
     )
@@ -119,86 +171,85 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
 
   return (
     <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      zIndex: 2147483647, background: '#111',
+      position: 'fixed', inset: 0, zIndex: 2147483647,
       display: 'flex', flexDirection: 'column',
+      background: '#111', fontFamily: "'Plus Jakarta Sans', sans-serif",
     }}>
       {/* Header */}
       <div style={{
-        padding: '12px 16px', background: '#1C1C1C',
         display: 'flex', alignItems: 'center', gap: 10,
-        borderBottom: '1px solid #333', flexShrink: 0,
+        padding: '12px 16px', background: '#1C1C1C',
+        borderBottom: '1px solid #2a2a2a', flexShrink: 0,
       }}>
         <button onClick={onClose} style={{
           width: 36, height: 36, borderRadius: '50%',
-          background: '#252525', border: 'none',
+          background: '#2a2a2a', border: 'none',
           color: '#fff', fontSize: 20, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>←</button>
+
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: 18, color: '#fff' }}>
-            Manzilni tanlang
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)' }}>
+          <div style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 18, color: '#fff', lineHeight: 1,
+          }}>Manzilni tanlang</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', marginTop: 2 }}>
             Xaritaga bosing yoki pini torting
           </div>
         </div>
-        <button onClick={detectGPS} disabled={gpsLoading} style={{
+
+        <button onClick={detectGPS} disabled={gpsLoad} style={{
           padding: '8px 14px', borderRadius: 10,
-          background: gpsLoading ? '#333' : '#F5C800',
-          border: 'none', color: gpsLoading ? '#666' : '#1A1A1A',
-          fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+          background: gpsLoad ? '#2a2a2a' : '#F5C800',
+          border: 'none', color: gpsLoad ? '#555' : '#1A1A1A',
+          fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          whiteSpace: 'nowrap', transition: 'all .2s',
         }}>
-          {gpsLoading ? '⏳' : '📡 GPS'}
+          {gpsLoad ? '⏳' : '📡 GPS'}
         </button>
       </div>
 
       {/* Map */}
       <div style={{ flex: 1, position: 'relative' }}>
-        <div ref={mapElRef} style={{ width: '100%', height: '100%' }} />
+        <div ref={mapDiv} style={{ width: '100%', height: '100%' }} />
 
-        {!mapReady && !error && (
+        {/* Loading overlay */}
+        {!ready && (
           <div style={{
             position: 'absolute', inset: 0, zIndex: 10,
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            background: '#0d1a0d', gap: 12,
+            background: '#0d1a0d', gap: 14,
           }}>
-            <div style={{ fontSize: 48 }}>🗺️</div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,.6)' }}>
+            <div style={{ fontSize: 52 }}>🗺️</div>
+            <div style={{ color: 'rgba(255,255,255,.6)', fontSize: 14 }}>
               Xarita yuklanmoqda...
             </div>
           </div>
         )}
 
-        {error && (
+        {/* Address bubble */}
+        {ready && (
           <div style={{
-            position: 'absolute', inset: 0, zIndex: 10,
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            background: '#1a0d0d', gap: 12, padding: 20,
+            position: 'absolute', bottom: 14, left: 14, right: 14, zIndex: 10,
+            background: 'rgba(17,17,17,.92)', borderRadius: 14,
+            padding: '10px 14px', fontSize: 13,
+            color: addrLoad ? 'rgba(255,255,255,.4)' : '#fff',
+            border: `1.5px solid ${address ? '#F5C800' : 'rgba(255,255,255,.12)'}`,
+            backdropFilter: 'blur(8px)',
+            transition: 'border-color .3s',
           }}>
-            <div style={{ fontSize: 40 }}>⚠️</div>
-            <div style={{ fontSize: 14, color: '#f87171', textAlign: 'center' }}>{error}</div>
-          </div>
-        )}
-
-        {mapReady && (
-          <div style={{
-            position: 'absolute', bottom: 16, left: 16, right: 16, zIndex: 10,
-            background: 'rgba(0,0,0,.88)', borderRadius: 14, padding: '10px 14px',
-            fontSize: 13, color: loading ? 'rgba(255,255,255,.4)' : '#fff',
-            border: `1.5px solid ${address ? '#F5C800' : 'rgba(255,255,255,.15)'}`,
-          }}>
-            {loading ? '📍 Manzil aniqlanmoqda...' : address || '👆 Xaritaga bosing'}
+            {addrLoad ? '📍 Manzil aniqlanmoqda...' : address || '👆 Xaritaga bosing'}
           </div>
         )}
       </div>
 
-      {/* Input + confirm */}
+      {/* Bottom */}
       <div style={{
-        padding: '10px 16px 16px', background: '#1C1C1C',
-        borderTop: '1px solid #333', flexShrink: 0,
+        padding: '12px 16px 20px', background: '#1C1C1C',
+        borderTop: '1px solid #2a2a2a', flexShrink: 0,
       }}>
+        {/* Manual input */}
         <input
           value={address}
           onChange={e => setAddress(e.target.value)}
@@ -208,18 +259,19 @@ function MapPickerContent({ onSelect, onClose, initial }: Props) {
             background: '#252525', border: '1.5px solid #333',
             color: '#fff', fontSize: 14, outline: 'none',
             boxSizing: 'border-box', marginBottom: 10,
+            fontFamily: "inherit",
           }}
         />
         <button
-          disabled={!address || loading}
-          onClick={() => address && !loading && onSelect(address, coords)}
+          disabled={!address || addrLoad}
+          onClick={() => address && !addrLoad && onSelect(address, coords)}
           style={{
             width: '100%', padding: 14, borderRadius: 14,
-            background: (address && !loading) ? '#F5C800' : '#252525',
+            background: (address && !addrLoad) ? '#F5C800' : '#252525',
             border: 'none',
-            color: (address && !loading) ? '#1A1A1A' : 'rgba(255,255,255,.3)',
-            fontSize: 15, fontWeight: 700,
-            cursor: (address && !loading) ? 'pointer' : 'not-allowed',
+            color: (address && !addrLoad) ? '#1A1A1A' : 'rgba(255,255,255,.25)',
+            fontSize: 15, fontWeight: 700, cursor: address ? 'pointer' : 'not-allowed',
+            fontFamily: "inherit", transition: 'all .2s',
           }}
         >
           ✅ Tasdiqlash
@@ -235,5 +287,5 @@ export default function MapPicker(props: Props) {
     setEl(document.getElementById('root') || document.body)
   }, [])
   if (!el) return null
-  return createPortal(<MapPickerContent {...props} />, el)
+  return createPortal(<MapContent {...props} />, el)
 }
