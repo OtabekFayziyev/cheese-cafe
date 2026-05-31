@@ -4,7 +4,8 @@ import { authenticate, requireAdmin, requireSuperAdmin, requireCourier, telegram
 // Controllers
 import * as menu    from '../controllers/menu'
 import * as orders  from '../controllers/orders'
-import * as users   from '../controllers/users'
+import * as users    from '../controllers/users'
+import * as delivery from '../controllers/delivery'
 
 export async function registerRoutes(app: FastifyInstance) {
 
@@ -12,6 +13,9 @@ export async function registerRoutes(app: FastifyInstance) {
   // AUTH
   // ═══════════════════════════════════════
   app.post('/api/auth/telegram', telegramAuth)
+
+  // Delivery fee
+  app.post('/api/delivery/calculate-fee', delivery.calculateFee)
 
   // ═══════════════════════════════════════
   // PUBLIC
