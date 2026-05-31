@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import { useAdminStore, ORDER_STATUS_LABELS, ORDER_STATUS_NEXT, MOCK_COURIERS, STATUS_COLORS } from '@/store/adminStore'
-import { ordersAPI } from '@/api/client'
+import { ordersAPI, adminAPI } from '@/api/client'
 import { AdminShell, AdminPageHeader } from './AdminShell'
 import { useFormat, useTelegram } from '@/hooks'
 import type { Order, OrderStatus } from '@/types'
@@ -34,6 +34,7 @@ export default function Orders() {
   const [detailOrder, setDetailOrder]   = useState<Order|null>(null)
   const [cancelTarget, setCancelTarget] = useState<Order|null>(null)
   const [courierModal, setCourierModal] = useState<Order|null>(null)
+  const [realCouriers, setRealCouriers] = useState<any[]>([])
   const [search, setSearch]             = useState('')
 
   // Real API state
@@ -41,6 +42,14 @@ export default function Orders() {
   const [loading, setLoading] = useState(true)
   const prevCountRef = useRef(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Load real couriers from DB
+  useEffect(() => {
+    adminAPI.users({ limit: 200 }).then((data: any) => {
+      const couriers = (data.users || []).filter((u: any) => u.role === 'COURIER')
+      setRealCouriers(couriers)
+    }).catch(() => {})
+  }, [])
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -84,13 +93,13 @@ export default function Orders() {
   }, [fetchOrders])
 
   const handleNext = async (order: Order) => {
-    const next = ORDER_STATUS_NEXT[order.status]
+    const next = ORDER_STATUS_NEXT[order.status as OrderStatus]
     if (!next) return
     haptic.medium()
     if (next === 'on_the_way') { setCourierModal(order); return }
     try {
       await ordersAPI.adminUpdateStatus(order.id, next.toUpperCase())
-      toast.success(`✅ ${ORDER_STATUS_LABELS[next]}`)
+      toast.success(`✅ ${ORDER_STATUS_LABELS[next as OrderStatus]}`)
       await fetchOrders()
     } catch {
       toast.error('Xato yuz berdi')
@@ -106,8 +115,10 @@ export default function Orders() {
       await fetchOrders()
     } catch {}
     assignCourier(courierModal.id, courierId)
-    const c = MOCK_COURIERS.find(c=>c.id===courierId)
-    toast.success(`🛵 ${c?.name || 'Kuryer'} tayinlandi!`)
+    const allCouriers = realCouriers.length > 0 ? realCouriers : MOCK_COURIERS
+    const c = allCouriers.find((c: any) => c.id === courierId)
+    const name = c?.firstName || c?.name || 'Kuryer'
+    toast.success(`🛵 ${name} tayinlandi!`)
     setCourierModal(null)
   }
 
@@ -225,10 +236,10 @@ export default function Orders() {
         <div className={styles.overlay} style={{alignItems:'center',padding:'20px'}} onClick={() => setCourierModal(null)}>
           <div className={styles.courierCard} onClick={e => e.stopPropagation()}>
             <h3 className={styles.confirmTitle}>🛵 Kuryer tanlash</h3>
-            {MOCK_COURIERS.map(c => (
+            {(realCouriers.length > 0 ? realCouriers : MOCK_COURIERS).map((c: any) => (
               <button key={c.id} className={styles.courierItem}
                 onClick={() => handleCourierAssign(c.id)}>
-                <span>🛵 {c.name}</span>
+                <span>🛵 {c.firstName || c.name} {c.lastName || ''}</span>
                 <span className={styles.courierPhone}>{c.phone}</span>
               </button>
             ))}
@@ -242,8 +253,8 @@ export default function Orders() {
 // ── Order Card ──
 function OrderCard({ order, fmt, onDetail, onNext, onCancel }: any) {
   const elapsed = useElapsed(order.createdAt)
-  const col     = STATUS_COLORS[order.status] || { bg:'#f0f0f0', text:'#666' }
-  const next    = ORDER_STATUS_NEXT[order.status]
+  const col     = STATUS_COLORS[order.status as OrderStatus] || { bg:'#f0f0f0', text:'#666' }
+  const next    = ORDER_STATUS_NEXT[order.status as OrderStatus]
 
   return (
     <div className={clsx(styles.card, order.status === 'pending' && styles.cardNew)}
@@ -254,7 +265,7 @@ function OrderCard({ order, fmt, onDetail, onNext, onCancel }: any) {
           <div className={styles.cardTime}>⏱ {elapsed}</div>
         </div>
         <div className={styles.cardStatus} style={{ background: col.bg, color: col.text }}>
-          {ORDER_STATUS_LABELS[order.status] || order.status}
+          {ORDER_STATUS_LABELS[order.status as OrderStatus] || order.status}
         </div>
       </div>
 
@@ -278,7 +289,7 @@ function OrderCard({ order, fmt, onDetail, onNext, onCancel }: any) {
               <button className={styles.cancelBtn} onClick={onCancel}>✕</button>
               {next && (
                 <button className={styles.nextBtn} onClick={onNext}>
-                  {ORDER_STATUS_LABELS[next]} →
+                  {ORDER_STATUS_LABELS[next as OrderStatus]} →
                 </button>
               )}
             </>
@@ -294,8 +305,8 @@ function OrderDetailModal({ order, fmt, onClose, onNext, onCancel }: any) {
   const elapsed = useElapsed(order?.createdAt)
   if (!order) return null
 
-  const col  = STATUS_COLORS[order.status] || { bg:'#f0f0f0', text:'#666' }
-  const next = ORDER_STATUS_NEXT[order.status]
+  const col  = STATUS_COLORS[order.status as OrderStatus] || { bg:'#f0f0f0', text:'#666' }
+  const next = ORDER_STATUS_NEXT[order.status as OrderStatus]
 
   const createdTime = order.createdAt ? new Date(order.createdAt).toLocaleString('uz-UZ', {
     day:'2-digit', month:'2-digit', year:'numeric',
@@ -315,7 +326,7 @@ function OrderDetailModal({ order, fmt, onClose, onNext, onCancel }: any) {
           </div>
           <div style={{ textAlign:'right' }}>
             <div className={styles.detailStatus} style={{ background:col.bg, color:col.text }}>
-              {ORDER_STATUS_LABELS[order.status] || order.status}
+              {ORDER_STATUS_LABELS[order.status as OrderStatus] || order.status}
             </div>
             <div className={styles.detailElapsed}>⏱ {elapsed} oldin</div>
           </div>
@@ -415,7 +426,7 @@ function OrderDetailModal({ order, fmt, onClose, onNext, onCancel }: any) {
             <button className={styles.detailCancelBtn} onClick={onCancel}>❌ Bekor qilish</button>
             {next && (
               <button className={styles.detailNextBtn} onClick={onNext}>
-                ✅ {ORDER_STATUS_LABELS[next]}
+                ✅ {ORDER_STATUS_LABELS[next as OrderStatus]}
               </button>
             )}
           </div>
