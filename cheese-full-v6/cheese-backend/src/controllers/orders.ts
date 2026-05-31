@@ -169,7 +169,7 @@ export async function getOrder(req: FastifyRequest, reply: FastifyReply) {
     include: {
       items:   { include: { menuItem: true, extras: { include: { extra: true } } } },
       user:    { select: { firstName: true, lastName: true, phone: true } },
-      courier: { select: { firstName: true, phone: true } },
+      courier: { select: { id: true, firstName: true, phone: true, lat: true, lng: true } },
     },
   })
 
@@ -359,7 +359,7 @@ export async function getCourierLocation(req: FastifyRequest, reply: FastifyRepl
 
   const courier = await prisma.user.findUnique({
     where:  { id: Number(id) },
-    select: { lat: true, lng: true, lastSeenAt: true, firstName: true },
+    select: { lat: true, lng: true, lastSeenAt: true, firstName: true, phone: true },
   })
 
   if (!courier) return reply.code(404).send({ ok: false })

@@ -67,17 +67,30 @@ export default function OrderTracking() {
     return () => clearInterval(t)
   }, [activeOrder?.id])
 
-  // Courier mock location animation
-  const [courierPos, setCourierPos] = useState({ x: 35, y: 25 })
+  // Real courier location
+  const [courierLoc, setCourierLoc] = useState<{lat:number,lng:number}|null>(null)
+  const [courierInfo, setCourierInfo] = useState<{name:string,phone:string}|null>(null)
+
   useEffect(() => {
-    const t = setInterval(() => {
-      setCourierPos(p => ({
-        x: Math.max(10, Math.min(85, p.x + (Math.random() - .5) * 6)),
-        y: Math.max(15, Math.min(75, p.y + (Math.random() - .5) * 4)),
-      }))
-    }, 1800)
+    if (!activeOrder?.courierId || activeOrder?.status !== 'on_the_way') return
+
+    const pollLocation = async () => {
+      try {
+        const loc = await ordersAPI.getCourierLocation(String(activeOrder.courierId))
+        if (loc?.lat && loc?.lng) {
+          setCourierLoc({ lat: loc.lat, lng: loc.lng })
+          setCourierInfo({ 
+            name:  loc.firstName || 'Kuryer',
+            phone: loc.phone     || ''
+          })
+        }
+      } catch {}
+    }
+
+    pollLocation()
+    const t = setInterval(pollLocation, 30000) // har 30s
     return () => clearInterval(t)
-  }, [])
+  }, [activeOrder?.courierId, activeOrder?.status])
 
   // Use most recent order if no active
   const order = activeOrder || orderHistory[0]
@@ -183,14 +196,14 @@ export default function OrderTracking() {
             </div>
             {/* Courier info */}
             <div className={styles.courierInfo}>
-              <div className={styles.courierAva}>🚴</div>
+              <div className={styles.courierAva}>🛵</div>
               <div className={styles.courierDetails}>
-                <div className={styles.courierName}>Jasur Karimov</div>
+                <div className={styles.courierName}>{courierInfo?.name || (activeOrder as any)?.courier?.firstName || "Kuryer yo'lda"}</div>
                 <div className={styles.courierRating}>
                   <Star size={12} fill="#F5C800" color="#F5C800" /> 4.9 · 234 ta yetkazma
                 </div>
               </div>
-              <button className={styles.courierCallBtn} onClick={() => window.open("tel:+998901234567")}>
+              <button className={styles.courierCallBtn} onClick={() => { const phone = courierInfo?.phone || (activeOrder as any)?.courier?.phone; if(phone) window.open(`tel:${phone}`) }}>
                 <Phone size={18} />
               </button>
             </div>
@@ -276,5 +289,78 @@ export default function OrderTracking() {
         <div style={{ height: 32 }} />
       </div>
     </AppShell>
+  )
+}
+
+// ── Real Courier Map Component ──
+function CourierMapView({ courierLat, courierLng, orderLat, orderLng }: {
+  courierLat: number; courierLng: number;
+  orderLat?: number; orderLng?: number;
+}) {
+  const mapDiv = React.useRef<HTMLDivElement>(null)
+  const mapObj = React.useRef<any>(null)
+  const courierMarker = React.useRef<any>(null)
+
+  React.useEffect(() => {
+    const init = () => {
+      if (!mapDiv.current || mapObj.current) return
+      const L = (window as any).L
+      if (!L) return
+
+      const map = L.map(mapDiv.current, {
+        center: [courierLat, courierLng],
+        zoom: 15,
+        zoomControl: false,
+        attributionControl: false,
+      })
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+
+      // Courier marker
+      const cIcon = L.divIcon({
+        className: '',
+        html: '<div style="font-size:28px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))">🛵</div>',
+        iconSize: [28, 28], iconAnchor: [14, 14],
+      })
+      courierMarker.current = L.marker([courierLat, courierLng], { icon: cIcon }).addTo(map)
+
+      // Order destination marker
+      if (orderLat && orderLng) {
+        const dIcon = L.divIcon({
+          className: '',
+          html: '<div style="font-size:28px">📍</div>',
+          iconSize: [28, 28], iconAnchor: [14, 28],
+        })
+        L.marker([orderLat, orderLng], { icon: dIcon }).addTo(map)
+      }
+
+      mapObj.current = map
+    }
+
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link')
+      link.id = 'leaflet-css'; link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+    if ((window as any).L) {
+      setTimeout(init, 50)
+    } else if (!document.getElementById('leaflet-js')) {
+      const s = document.createElement('script')
+      s.id = 'leaflet-js'
+      s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+      s.onload = () => setTimeout(init, 50)
+      document.head.appendChild(s)
+    }
+  }, [])
+
+  // Update courier position
+  React.useEffect(() => {
+    if (!courierMarker.current || !mapObj.current) return
+    courierMarker.current.setLatLng([courierLat, courierLng])
+    mapObj.current.setView([courierLat, courierLng], 15)
+  }, [courierLat, courierLng])
+
+  return (
+    <div ref={mapDiv} style={{ width: '100%', height: '100%', minHeight: 180 }} />
   )
 }
