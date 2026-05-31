@@ -356,7 +356,22 @@ export default function Cart() {
             onSelect={(addr, c) => {
               setAddrInput(addr)
               setShowMap(false)
-              if (c) setDeliveryFee(calcDeliveryFee(c.lat, c.lng))
+              if (c) {
+                const API = (import.meta as any).env?.VITE_API_URL || ''
+                fetch(`${API}/api/delivery/calculate-fee`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ lat: c.lat, lng: c.lng }),
+                })
+                  .then(r => r.json())
+                  .then(data => {
+                    if (data.ok && data.data?.deliveryFee) {
+                      setDeliveryFee(data.data.deliveryFee)
+                      setDistance(data.data.distanceText || '')
+                    }
+                  })
+                  .catch(() => {})
+              }
               toast.success('✅ Manzil saqlandi')
             }}
           />
