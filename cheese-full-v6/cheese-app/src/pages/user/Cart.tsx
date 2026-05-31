@@ -17,25 +17,6 @@ import { Button, EmptyState } from '@/components/ui'
 import type { PaymentType } from '@/types'
 import styles from './Cart.module.css'
 
-// ── Yetkazish narxini hisoblash ──
-const CAFE_LAT = 38.853373449716344
-const CAFE_LNG = 65.7889651753182
-
-function calcDeliveryFee(userLat: number, userLng: number): number {
-  // Haversine formula — km
-  const R    = 6371
-  const dLat = (userLat - CAFE_LAT) * Math.PI / 180
-  const dLng = (userLng - CAFE_LNG) * Math.PI / 180
-  const a    = Math.sin(dLat/2) ** 2 +
-               Math.cos(CAFE_LAT * Math.PI/180) *
-               Math.cos(userLat  * Math.PI/180) *
-               Math.sin(dLng/2)  ** 2
-  const km   = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-
-  if (km <= 1) return 5000
-  const extra = Math.ceil((km - 1) / 0.5)
-  return 5000 + extra * 1000
-}
 
 export default function Cart() {
   const navigate   = useNavigate()
