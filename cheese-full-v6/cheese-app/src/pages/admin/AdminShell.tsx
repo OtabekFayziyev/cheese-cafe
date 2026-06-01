@@ -50,7 +50,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   useAdminData() // Real data for all pages
 
+  // Load persistent cafe status from DB on mount
+  useEffect(() => {
+    settingsAPI.get().then((data: any) => {
+      const s   = data?.settings || data
+      const raw = s?.is_open ?? s?.isOpen
+      if (raw !== undefined) {
+        const val = raw === 'true' || raw === true
+        setIsOpen(val)
+        ;(window as any).__cafeIsOpen = val
+      }
+    }).catch(() => {})
+  }, [])
+
   const [newOrderPopup, setNewOrderPopup] = useState<any>(null)
+  const [toggling,      setToggling]      = useState(false)
   const prevPendingRef = useRef(0)
 
   // Global new order polling
@@ -91,19 +105,52 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         <LiveClock />
 
-        <button
-          className={clsx(styles.toggleBtn, settings.isOpen && styles.toggleOpen)}
+        <div
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}
           onClick={async () => {
+            if (toggling) return
             haptic.medium()
+            setToggling(true)
             const newVal = !settings.isOpen
             setIsOpen(newVal)
             ;(window as any).__cafeIsOpen = newVal
-            try { await settingsAPI.update({ is_open: String(newVal), isOpen: String(newVal) }) } catch {}
+            window.dispatchEvent(new CustomEvent('cafe:status', { detail: { isOpen: newVal } }))
+            try {
+              await settingsAPI.update({ is_open: String(newVal), isOpen: String(newVal) })
+            } catch {
+              // Rollback on error
+              setIsOpen(!newVal)
+              ;(window as any).__cafeIsOpen = !newVal
+            } finally {
+              setToggling(false)
+            }
           }}
+          style={{ cursor: toggling ? 'not-allowed' : 'pointer' }}
         >
-          {settings.isOpen ? <Wifi size={14} /> : <WifiOff size={14} />}
-          {settings.isOpen ? 'Ochiq' : 'Yopiq'}
-        </button>
+          {/* Toggle switch */}
+          <div style={{
+            width: 48, height: 26, borderRadius: 13,
+            background: settings.isOpen ? '#22C55E' : '#EF4444',
+            position: 'relative', transition: 'background .3s',
+            opacity: toggling ? 0.6 : 1,
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 3, left: settings.isOpen ? 25 : 3,
+              width: 20, height: 20, borderRadius: '50%',
+              background: '#fff',
+              transition: 'left .3s',
+              boxShadow: '0 1px 4px rgba(0,0,0,.3)',
+            }} />
+          </div>
+          {/* Label */}
+          <div style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: .5,
+            color: settings.isOpen ? '#22C55E' : '#EF4444',
+          }}>
+            {toggling ? '...' : settings.isOpen ? 'OCHIQ' : 'YOPIQ'}
+          </div>
+        </div>
       </header>
 
       {/* Content */}
