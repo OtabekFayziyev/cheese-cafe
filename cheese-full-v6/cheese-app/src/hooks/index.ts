@@ -64,9 +64,9 @@ export function useFormat() {
 // ── Work hours — UZB time (UTC+5), 09:00–05:00 ──
 export function useWorkHours() {
   const { settings } = useCafeStore()
-  const [backendIsOpen, setBackendIsOpen] = useState<boolean|null>(null)
+  // null = not loaded yet, true/false = loaded from DB
+  const [isOpen, setIsOpen] = useState<boolean>(true)
 
-  // Poll cafe status every 5s — simple and reliable
   useEffect(() => {
     const API = (import.meta as any).env?.VITE_API_URL || ''
 
@@ -77,7 +77,8 @@ export function useWorkHours() {
         const s    = data?.data?.settings
         const raw  = s?.is_open ?? s?.isOpen
         if (raw !== undefined) {
-          setBackendIsOpen(raw === 'true' || raw === true)
+          const val = raw === 'true' || raw === true
+          setIsOpen(val)
         }
       } catch {}
     }
@@ -87,43 +88,9 @@ export function useWorkHours() {
     return () => clearInterval(t)
   }, [])
 
-  const checkOpen = useCallback(() => {
-    // Backend override takes priority
-    if (backendIsOpen === false) return false
-    if (backendIsOpen === true)  return true
-    // UZB time = UTC + 5 hours
-    const now = new Date()
-    const uzbOffset = 5 * 60 // minutes
-    const utcMins = now.getUTCHours() * 60 + now.getUTCMinutes()
-    const uzbMins = (utcMins + uzbOffset) % (24 * 60)
-
-    const uzbDay = Math.floor((utcMins + uzbOffset) / (24 * 60)) % 7
-    const day = (now.getUTCDay() + (utcMins + uzbOffset >= 24 * 60 ? 1 : 0)) % 7
-    const hours = settings.workHours[day]
-    if (!hours || hours.isOff) return false
-
-    // 09:00 open, 05:00 next-day close → open range: 540..1740 (in minutes, wrapping)
-    const [oh, om] = hours.open.split(':').map(Number)
-    const [ch, cm] = hours.close.split(':').map(Number)
-    const openMins  = oh * 60 + om           // 540
-    let   closeMins = ch * 60 + cm           // 300
-    if (closeMins <= openMins) closeMins += 24 * 60  // 300+1440=1740
-
-    const cur = uzbMins < openMins ? uzbMins + 24 * 60 : uzbMins
-    return cur >= openMins && cur < closeMins
-  }, [settings])
-
-  const [isOpen, setIsOpen] = useState(checkOpen())
-  useEffect(() => {
-    setIsOpen(checkOpen())
-    const t = setInterval(() => setIsOpen(checkOpen()), 60_000)
-    return () => clearInterval(t)
-  }, [checkOpen, backendIsOpen])
-
   // UZB local day
   const now = new Date()
-  const uzbHour = (now.getUTCHours() + 5) % 24
-  const uzbDay  = now.getUTCDay() // close enough for display
+  const uzbDay     = now.getUTCDay()
   const todayHours = settings.workHours[uzbDay]
 
   return {
