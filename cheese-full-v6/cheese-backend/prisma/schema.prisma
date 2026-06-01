@@ -58,6 +58,8 @@ model User {
   lat         Float?
   lng         Float?
   lastSeenAt  DateTime?
+  isOnline    Boolean   @default(false)
+  balance     Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

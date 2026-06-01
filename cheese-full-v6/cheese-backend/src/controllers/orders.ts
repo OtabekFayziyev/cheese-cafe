@@ -7,7 +7,7 @@ import { ok, err, paginate } from '../types/index'
 import { generateOrderNumber, calcBonusPoints } from '../utils/helpers'
 import type { OrderStatus } from '@prisma/client'
 import { notifyAdminNewOrder, notifyUserOrderStatus, bot } from '../bot/index'
-import { emitOrderStatusChanged, emitNewOrder, emitCourierAssigned } from '../services/socket'
+import { emitOrderStatusChanged, emitNewOrder, emitCourierAssigned, emitDeliveryPool } from '../services/socket'
 
 // ── POST /api/orders ──
 export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
@@ -293,6 +293,11 @@ export async function updateOrderStatus(req: FastifyRequest, reply: FastifyReply
 
   // Socket — real-time status update to user
   emitOrderStatusChanged(updated)
+
+  // READY → barcha kuryerlarga xabar
+  if (statusUpper === 'READY') {
+    emitDeliveryPool(updated)
+  }
 
   // Kuryer tayinlanganda unga ham xabar
   if (courierId && statusUpper === 'ON_THE_WAY') {

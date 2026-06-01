@@ -6,6 +6,7 @@ import * as menu    from '../controllers/menu'
 import * as orders  from '../controllers/orders'
 import * as users    from '../controllers/users'
 import * as delivery from '../controllers/delivery'
+import * as courier  from '../controllers/courier'
 
 export async function registerRoutes(app: FastifyInstance) {
 
@@ -62,6 +63,14 @@ export async function registerRoutes(app: FastifyInstance) {
   // ═══════════════════════════════════════
   // COURIER
   // ═══════════════════════════════════════
+  app.get('/api/courier/profile',            { preHandler: [authenticate, requireCourier] }, courier.getCourierProfile)
+  app.get('/api/courier/orders',             { preHandler: [authenticate, requireCourier] }, courier.getCourierOrders)
+  app.get('/api/courier/history',            { preHandler: [authenticate, requireCourier] }, courier.getCourierHistory)
+  app.get('/api/courier/earnings',           { preHandler: [authenticate, requireCourier] }, courier.getEarnings)
+  app.patch('/api/courier/online',           { preHandler: [authenticate, requireCourier] }, courier.toggleOnline)
+  app.patch('/api/courier/location',         { preHandler: [authenticate, requireCourier] }, courier.updateLocation)
+  app.patch('/api/courier/orders/:id/status',{ preHandler: [authenticate, requireCourier] }, courier.updateOrderStatus)
+  app.get('/api/courier/:id/location',       { preHandler: [authenticate] },                 courier.getCourierLocation)
   app.get('/api/courier/orders',              { preHandler: [authenticate, requireCourier] }, orders.getCourierOrders)
   app.patch('/api/courier/orders/:id/status', { preHandler: [authenticate, requireCourier] }, orders.updateCourierOrderStatus)
   app.patch('/api/courier/location',          { preHandler: [authenticate, requireCourier] }, orders.updateCourierLocation)

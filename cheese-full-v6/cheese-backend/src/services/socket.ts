@@ -120,3 +120,21 @@ export function emitCafeStatus(isOpen: boolean) {
   if (!io) return
   io.emit('cafe:status', { isOpen })
 }
+
+// READY buyurtma — barcha online kuryerlarga
+export function emitDeliveryPool(order: any) {
+  if (!io) return
+  io.to('couriers').emit('order:delivery_pool', {
+    id:          order.id,
+    orderNumber: order.orderNumber,
+    address:     order.address,
+    deliveryFee: order.deliveryFee,
+    totalPrice:  order.totalPrice,
+    items:       (order.items || []).slice(0, 3).map((i: any) => ({
+      name:  i.menuItem?.name  || 'Taom',
+      emoji: i.menuItem?.emoji || '🍔',
+      qty:   i.quantity,
+    })),
+    createdAt: order.createdAt,
+  })
+}

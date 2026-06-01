@@ -1,53 +1,60 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useCourierStore } from '@/store/courierStore'
 import { ordersAPI } from '@/api/client'
-import { useUserStore } from '@/store'
+import { getSocket } from '@/hooks/useSocket'
 
 export function useCourierData() {
-  const setActiveOrders = useCourierStore(s => s.setActiveOrders)
-  const setHistory      = useCourierStore(s => s.setHistory)
-  const setStats        = useCourierStore(s => s.setStats)
-  const user            = useUserStore(s => s.user)
-  const intervalRef     = useRef<ReturnType<typeof setInterval>>()
+  const {
+    setActiveOrders, setProfile, setHistory, setStats,
+    addActiveOrder, removeActiveOrder,
+  } = useCourierStore()
 
-  const fetch = async () => {
+  const loadAll = useCallback(async () => {
     try {
-      const data = await ordersAPI.courierGetActive()
-      const orders = (data || []).map((o: any) => ({
-        ...o,
-        status:       (o.status || 'ready').toLowerCase(),
-        deliveryType: (o.deliveryType || 'delivery').toLowerCase(),
-        customerName: o.user ? `${o.user.firstName || ''} ${o.user.lastName || ''}`.trim() : 'Mijoz',
-        items: (o.items || []).map((i: any) => ({
-          ...i,
-          menuItem:   i.menuItem || { name: 'Taom', emoji: '🍔', price: i.price },
-          totalPrice: i.price,
-        })),
-      }))
-      setActiveOrders(orders)
+      const [profileRes, ordersRes, historyRes, earningsRes] = await Promise.allSettled([
+        ordersAPI.courierProfile?.()    || Promise.resolve(null),
+        ordersAPI.courierGetActive?.()  || Promise.resolve([]),
+        ordersAPI.courierHistory?.()    || Promise.resolve([]),
+        ordersAPI.courierEarnings?.()   || Promise.resolve(null),
+      ])
 
-      // Stats from completed orders
-      const today = new Date().toDateString()
-      const todayDone = orders.filter((o: any) => 
-        o.status === 'delivered' && new Date(o.updatedAt).toDateString() === today
-      )
-      setStats({
-        todayDeliveries: todayDone.length,
-        todayEarnings:   todayDone.reduce((s: number, o: any) => s + (o.deliveryFee || 5000), 0),
-        weekDeliveries:  orders.filter((o: any) => o.status === 'delivered').length,
-        weekEarnings:    orders.filter((o: any) => o.status === 'delivered')
-                               .reduce((s: number, o: any) => s + (o.deliveryFee || 5000), 0),
-        rating:          4.9,
-        totalDeliveries: user?.bonusPoints ? Math.floor(user.bonusPoints / 10) : 0,
-      })
+      if (profileRes.status  === 'fulfilled' && profileRes.value) {
+        setProfile(profileRes.value)
+      }
+      if (ordersRes.status   === 'fulfilled' && ordersRes.value) {
+        setActiveOrders(Array.isArray(ordersRes.value) ? ordersRes.value : [])
+      }
+      if (historyRes.status  === 'fulfilled' && historyRes.value) {
+        setHistory(Array.isArray(historyRes.value) ? historyRes.value : [])
+      }
+      if (earningsRes.status === 'fulfilled' && earningsRes.value) {
+        const e = earningsRes.value
+        setStats({
+          todayDeliveries: e.today?.count    ?? 0,
+          todayEarnings:   e.today?.earnings ?? 0,
+          weekDeliveries:  e.week?.count     ?? 0,
+          weekEarnings:    e.week?.earnings  ?? 0,
+          totalDeliveries: e.month?.count    ?? 0,
+          balance:         e.balance         ?? 0,
+        })
+      }
     } catch {}
-  }
-
-  useEffect(() => {
-    fetch()
-    intervalRef.current = setInterval(fetch, 5000)
-    return () => clearInterval(intervalRef.current)
   }, [])
 
-  return { refetch: fetch }
+  // Socket — new order in pool
+  useEffect(() => {
+    loadAll()
+
+    const s = getSocket()
+    if (!s) return
+
+    const onPool = (order: any) => {
+      addActiveOrder?.({ ...order, status: 'ready' })
+    }
+
+    s.on('order:delivery_pool', onPool)
+    return () => { s.off('order:delivery_pool', onPool) }
+  }, [])
+
+  return { reload: loadAll }
 }

@@ -57,6 +57,10 @@ export const ordersAPI = {
   adminUpdateStatus:   (id: string, status: string, extra?: any) =>
     api.patch(`/api/admin/orders/${id}/status`, { status, ...extra }).then(r => r.data.data),
   courierGetActive:    ()            => api.get('/api/courier/orders').then(r => r.data.data),
+  courierHistory:      ()            => api.get('/api/courier/history').then(r => r.data.data),
+  courierProfile:      ()            => api.get('/api/courier/profile').then(r => r.data.data),
+  courierEarnings:     ()            => api.get('/api/courier/earnings').then(r => r.data.data),
+  courierToggleOnline: (isOnline: boolean) => api.patch('/api/courier/online', { isOnline }).then(r => r.data.data),
   courierUpdateStatus:  (id: string, status: string) =>
     api.patch(`/api/courier/orders/${id}/status`, { status }).then(r => r.data.data),
   updateCourierLocation: (lat: number, lng: number) =>
