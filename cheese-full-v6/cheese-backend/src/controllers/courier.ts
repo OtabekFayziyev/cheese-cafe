@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify'
-import { prisma } from '../lib/prisma'
+import { prisma } from '../utils/db'
 import { emitOrderStatusChanged } from '../services/socket'
 import { io } from '../services/socket'
 
