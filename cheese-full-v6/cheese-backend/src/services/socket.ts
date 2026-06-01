@@ -1,82 +1,107 @@
 import { Server as SocketServer } from 'socket.io'
-import type { Server as HttpServer } from 'http'
+import type { FastifyInstance } from 'fastify'
 
-let io: SocketServer
+let io: SocketServer | null = null
 
-export function initSocket(server: HttpServer, frontendUrl: string) {
-  io = new SocketServer(server, {
-    cors: {
-      origin:      frontendUrl,
-      credentials: true,
-    },
-  })
-
-  io.on('connection', (socket) => {
-    const { userId, role } = socket.handshake.auth
-
-    // Xonalarga qo'shish
-    if (userId) socket.join(`user:${userId}`)
-    if (role === 'ADMIN' || role === 'MODERATOR') socket.join('admins')
-    if (role === 'COURIER') socket.join(`courier:${userId}`)
-
-    console.log(`🔌 Connected: ${role || 'unknown'} #${userId} (${socket.id})`)
-
-    socket.on('disconnect', () => {
-      console.log(`🔌 Disconnected: ${socket.id}`)
+export function initSocket(app: FastifyInstance, frontendUrl: string) {
+  // Fastify server tayyor bo'lgandan keyin Socket.io ni ulash
+  app.server.on('listening', () => {
+    io = new SocketServer(app.server, {
+      cors: {
+        origin:      [frontendUrl, 'https://cheese-cafe.netlify.app', 'http://localhost:5173'],
+        credentials: true,
+        methods:     ['GET', 'POST'],
+      },
+      transports:           ['websocket', 'polling'],
+      pingTimeout:          60000,
+      pingInterval:         25000,
+      upgradeTimeout:       30000,
+      allowEIO3:            true,
     })
 
-    // Kuryer lokatsiyasini update qilish
-    socket.on('courier:location', (data: { lat: number; lng: number; orderId: string }) => {
-      // Mijozga yetkazish
-      io.to(`order:${data.orderId}`).emit('courier:moved', {
-        lat: data.lat,
-        lng: data.lng,
+    io.on('connection', (socket) => {
+      const { userId, role } = socket.handshake.auth
+
+      if (userId) socket.join(`user:${userId}`)
+      if (role === 'ADMIN' || role === 'MODERATOR') socket.join('admins')
+      if (role === 'COURIER') socket.join(`courier:${userId}`)
+
+      console.log(`🔌 Connected: ${role || 'unknown'} uid=${userId} sid=${socket.id}`)
+
+      // User buyurtmani kuzatmoqchi
+      socket.on('track:order', (orderId: string) => {
+        socket.join(`order:${orderId}`)
+        console.log(`👁 Tracking order: ${orderId}`)
+      })
+
+      // Kuryer lokatsiyasi
+      socket.on('courier:location', (data: { lat: number; lng: number; orderId: string }) => {
+        if (!data.lat || !data.lng || !data.orderId) return
+        io!.to(`order:${data.orderId}`).emit('courier:moved', {
+          lat: data.lat,
+          lng: data.lng,
+          ts:  Date.now(),
+        })
+      })
+
+      socket.on('disconnect', (reason) => {
+        console.log(`🔌 Disconnected: ${socket.id} reason=${reason}`)
+      })
+
+      socket.on('error', (err) => {
+        console.error(`🔌 Socket error: ${err.message}`)
       })
     })
 
-    // Buyurtma tracking uchun xonaga kirish
-    socket.on('track:order', (orderId: string) => {
-      socket.join(`order:${orderId}`)
-    })
+    console.log('✅ Socket.io initialized on Fastify server')
   })
-
-  return io
 }
 
-// ── Emit helpers (controllerlarda ishlatiladi) ──
-
-// Yangi buyurtma — adminga xabar
 export function emitNewOrder(order: any) {
   if (!io) return
   io.to('admins').emit('order:new', {
     id:          order.id,
     orderNumber: order.orderNumber,
     totalPrice:  order.totalPrice,
-    customerName:`${order.user?.firstName || 'Mijoz'}`,
-    createdAt:   order.createdAt,
+    customerName: `${order.user?.firstName || 'Mijoz'}`,
+    phone:        order.phone,
+    items:        (order.items || []).slice(0, 3).map((i: any) => ({
+      name:  i.menuItem?.name  || 'Taom',
+      emoji: i.menuItem?.emoji || '🍔',
+      qty:   i.quantity,
+    })),
+    createdAt: order.createdAt,
   })
 }
 
-// Buyurtma status o'zgardi — mijozga xabar
 export function emitOrderStatusChanged(order: any) {
   if (!io) return
-  io.to(`user:${order.userId}`).emit('order:status', {
-    id:     order.id,
-    status: order.status,
-  })
-  io.to(`order:${order.id}`).emit('order:status', {
-    id:     order.id,
-    status: order.status,
-    courier: order.courier,
-  })
-  // Adminlarga ham
-  io.to('admins').emit('order:updated', {
-    id:     order.id,
-    status: order.status,
-  })
+
+  const payload = {
+    id:          order.id,
+    status:      order.status,
+    orderNumber: order.orderNumber,
+    courier:     order.courier ? {
+      id:        order.courier.id,
+      firstName: order.courier.firstName,
+      phone:     order.courier.phone,
+      lat:       order.courier.lat,
+      lng:       order.courier.lng,
+    } : null,
+  }
+
+  // Userga (telegramId bo'yicha)
+  if (order.userId) {
+    io.to(`user:${order.userId}`).emit('order:status', payload)
+  }
+
+  // Order room da (tracking)
+  io.to(`order:${order.id}`).emit('order:status', payload)
+
+  // Adminlarga
+  io.to('admins').emit('order:updated', payload)
 }
 
-// Kuryerga yangi vazifa
 export function emitCourierAssigned(courierId: number, order: any) {
   if (!io) return
   io.to(`courier:${courierId}`).emit('courier:newTask', {
@@ -84,6 +109,7 @@ export function emitCourierAssigned(courierId: number, order: any) {
     orderNumber: order.orderNumber,
     address:     order.address,
     totalPrice:  order.totalPrice,
+    phone:       order.phone,
   })
 }
 

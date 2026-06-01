@@ -8,7 +8,7 @@ import {
 import clsx from 'clsx'
 import { useOrderStore } from '@/store'
 import { ordersAPI } from '@/api/client'
-import { useOrderSocket, sendCourierLocation } from '@/hooks/useSocket'
+import { useTrackOrder, useCourierLocation } from '@/hooks/useSocket'
 import { useFormat, useTelegram } from '@/hooks'
 import { AppShell } from '@/components/layout/AppShell'
 import type { OrderStatus } from '@/types'
@@ -79,13 +79,13 @@ export default function OrderTracking() {
   const [courierLoc,  setCourierLoc]  = useState<{ lat: number; lng: number } | null>(null)
   const [courierInfo, setCourierInfo] = useState<{ name: string; phone: string } | null>(null)
 
-  // Socket.io + HTTP fallback for courier location
-  const handleCourierMoved = useCallback((loc: {lat: number, lng: number}) => {
+  // Socket.io real-time courier tracking
+  useTrackOrder(activeOrder?.id)
+  useCourierLocation(activeOrder?.id, useCallback((loc) => {
     setCourierLoc({ lat: loc.lat, lng: loc.lng })
-  }, [])
+  }, []))
 
-  useOrderSocket(activeOrder?.id, handleCourierMoved)
-
+  // HTTP fallback — initial load
   useEffect(() => {
     if (activeOrder?.status !== 'on_the_way') return
     if (!(activeOrder as any)?.courierId) return

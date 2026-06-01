@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react'
+import React, { Suspense, lazy, useEffect, useState, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
@@ -50,7 +50,23 @@ function AppRoutes() {
   const setUser    = useUserStore(s => s.setUser)
   const [loading, setLoading] = useState(true)
   useColorScheme()
-  useGlobalSocket() // Real-time socket connection
+  // Real-time Socket.io
+  const socketUser     = useUserStore(s => s.user)
+  const setActiveOrder = useOrderStore(s => s.setActiveOrder)
+
+  useGlobalSocket(
+    socketUser?.telegramId ? String(socketUser.telegramId) : null,
+    socketUser?.role || 'USER',
+    useCallback((data) => {
+      const current = useOrderStore.getState().activeOrder
+      if (!current || current.id !== data.id) return
+      setActiveOrder({
+        ...current,
+        status:  data.status.toLowerCase() as any,
+        courier: data.courier || (current as any).courier,
+      })
+    }, [])
+  )
 
   useEffect(() => {
     const init = async () => {
@@ -99,25 +115,7 @@ function AppRoutes() {
     init().finally(() => setLoading(false))
   }, [])
 
-  // Global order status polling — ishlaydi qaysi sahifada bo'lmasin
-  const activeOrder    = useOrderStore(s => s.activeOrder)
-  const setActiveOrder = useOrderStore(s => s.setActiveOrder)
 
-  useEffect(() => {
-    if (!activeOrder?.id) return
-    const poll = async () => {
-      try {
-        const updated = await ordersAPI.getOne(activeOrder.id)
-        if (!updated) return
-        const newStatus = (updated.status || '').toLowerCase()
-        if (newStatus !== activeOrder.status) {
-          setActiveOrder({ ...activeOrder, ...updated, status: newStatus })
-        }
-      } catch {}
-    }
-    const t = setInterval(poll, 5000)
-    return () => clearInterval(t)
-  }, [activeOrder?.id, activeOrder?.status])
 
   if (loading) return <Loader />
 
