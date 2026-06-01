@@ -2,10 +2,10 @@ import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
-import { useUserStore } from '@/store'
+import { useUserStore, useOrderStore } from '@/store'
 import { useColorScheme } from '@/hooks'
 import { DevSwitcher } from '@/components/ui/DevSwitcher'
-import { authAPI } from '@/api/client'
+import { authAPI, ordersAPI } from '@/api/client'
 
 const Home          = lazy(() => import('@/pages/user/Home'))
 const Search        = lazy(() => import('@/pages/user/Search'))
@@ -96,6 +96,26 @@ function AppRoutes() {
     }
     init().finally(() => setLoading(false))
   }, [])
+
+  // Global order status polling — ishlaydi qaysi sahifada bo'lmasin
+  const activeOrder    = useOrderStore(s => s.activeOrder)
+  const setActiveOrder = useOrderStore(s => s.setActiveOrder)
+
+  useEffect(() => {
+    if (!activeOrder?.id) return
+    const poll = async () => {
+      try {
+        const updated = await ordersAPI.getOne(activeOrder.id)
+        if (!updated) return
+        const newStatus = (updated.status || '').toLowerCase()
+        if (newStatus !== activeOrder.status) {
+          setActiveOrder({ ...activeOrder, ...updated, status: newStatus })
+        }
+      } catch {}
+    }
+    const t = setInterval(poll, 5000)
+    return () => clearInterval(t)
+  }, [activeOrder?.id, activeOrder?.status])
 
   if (loading) return <Loader />
 
