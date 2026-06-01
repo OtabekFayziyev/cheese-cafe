@@ -114,3 +114,9 @@ export function emitCourierAssigned(courierId: number, order: any) {
 }
 
 export { io }
+
+// Cafe ochiq/yopiq holati o'zgardi
+export function emitCafeStatus(isOpen: boolean) {
+  if (!io) return
+  io.emit('cafe:status', { isOpen })
+}

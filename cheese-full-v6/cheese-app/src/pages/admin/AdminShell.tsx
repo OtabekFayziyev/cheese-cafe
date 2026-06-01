@@ -98,7 +98,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             const newVal = !settings.isOpen
             setIsOpen(newVal)
             ;(window as any).__cafeIsOpen = newVal
-            try { await settingsAPI.update({ isOpen: String(newVal) }) } catch {}
+            try { await settingsAPI.update({ is_open: String(newVal), isOpen: String(newVal) }) } catch {}
           }}
         >
           {settings.isOpen ? <Wifi size={14} /> : <WifiOff size={14} />}

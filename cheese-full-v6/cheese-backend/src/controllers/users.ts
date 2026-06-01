@@ -1,4 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify'
+import { emitCafeStatus } from '../services/socket'
 import { prisma } from '../utils/db'
 import { ok, err, paginate } from '../types/index'
 

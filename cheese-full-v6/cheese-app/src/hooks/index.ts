@@ -66,21 +66,33 @@ export function useWorkHours() {
   const { settings } = useCafeStore()
   const [backendIsOpen, setBackendIsOpen] = useState<boolean|null>(null)
 
-  // Load isOpen from backend every 30s
+  // Load isOpen from backend every 30s + socket instant update
   useEffect(() => {
+    // Socket real-time
+    const onCafeStatus = (e: any) => {
+      setBackendIsOpen(e.detail.isOpen)
+    }
+    window.addEventListener('cafe:status', onCafeStatus)
+
     const load = async () => {
       try {
         const res  = await fetch((import.meta as any).env?.VITE_API_URL + '/api/settings' || '/api/settings')
         const data = await res.json()
-        if (data?.data?.settings?.isOpen !== undefined) {
-          const val = data.data.settings.isOpen === 'true' || data.data.settings.isOpen === true
+        // DB da 'is_open' yoki 'isOpen' bo'lishi mumkin
+        const s = data?.data?.settings
+        const raw = s?.is_open ?? s?.isOpen
+        if (raw !== undefined) {
+          const val = raw === 'true' || raw === true
           setBackendIsOpen(val)
         }
       } catch {}
     }
     load()
     const t = setInterval(load, 30000)
-    return () => clearInterval(t)
+    return () => {
+      clearInterval(t)
+      window.removeEventListener('cafe:status', onCafeStatus)
+    }
   }, [])
 
   const checkOpen = useCallback(() => {
