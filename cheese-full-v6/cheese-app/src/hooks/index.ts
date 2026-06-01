@@ -66,33 +66,29 @@ export function useWorkHours() {
   const { settings } = useCafeStore()
   const [backendIsOpen, setBackendIsOpen] = useState<boolean|null>(null)
 
-  // Load isOpen from backend every 30s + socket instant update
+  // Load from DB on mount
   useEffect(() => {
-    // Socket real-time
-    const onCafeStatus = (e: any) => {
-      setBackendIsOpen(e.detail.isOpen)
-    }
-    window.addEventListener('cafe:status', onCafeStatus)
-
     const load = async () => {
       try {
-        const res  = await fetch((import.meta as any).env?.VITE_API_URL + '/api/settings' || '/api/settings')
+        const API = (import.meta as any).env?.VITE_API_URL || ''
+        const res  = await fetch(`${API}/api/settings`)
         const data = await res.json()
-        // DB da 'is_open' yoki 'isOpen' bo'lishi mumkin
-        const s = data?.data?.settings
-        const raw = s?.is_open ?? s?.isOpen
+        const s    = data?.data?.settings
+        const raw  = s?.is_open ?? s?.isOpen
         if (raw !== undefined) {
-          const val = raw === 'true' || raw === true
-          setBackendIsOpen(val)
+          setBackendIsOpen(raw === 'true' || raw === true)
         }
       } catch {}
     }
     load()
-    const t = setInterval(load, 30000)
-    return () => {
-      clearInterval(t)
-      window.removeEventListener('cafe:status', onCafeStatus)
+
+    // Listen to custom event from socket hook
+    const handler = (e: Event) => {
+      const val = (e as CustomEvent).detail?.isOpen
+      if (typeof val === 'boolean') setBackendIsOpen(val)
     }
+    window.addEventListener('__cafe_status__', handler)
+    return () => window.removeEventListener('__cafe_status__', handler)
   }, [])
 
   const checkOpen = useCallback(() => {
