@@ -172,7 +172,7 @@ export async function getOrder(req: FastifyRequest, reply: FastifyReply) {
     include: {
       items:   { include: { menuItem: true, extras: { include: { extra: true } } } },
       user:    { select: { firstName: true, lastName: true, phone: true } },
-      courier: { select: { id: true, firstName: true, phone: true, lat: true, lng: true } },
+      courier: { select: { id: true, firstName: true, phone: true } },
     },
   })
 
