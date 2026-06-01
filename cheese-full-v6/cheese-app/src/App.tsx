@@ -6,6 +6,7 @@ import { useUserStore, useOrderStore } from '@/store'
 import { useColorScheme } from '@/hooks'
 import { DevSwitcher } from '@/components/ui/DevSwitcher'
 import { authAPI, ordersAPI } from '@/api/client'
+import { useGlobalSocket } from '@/hooks/useSocket'
 
 const Home          = lazy(() => import('@/pages/user/Home'))
 const Search        = lazy(() => import('@/pages/user/Search'))
@@ -49,6 +50,7 @@ function AppRoutes() {
   const setUser    = useUserStore(s => s.setUser)
   const [loading, setLoading] = useState(true)
   useColorScheme()
+  useGlobalSocket() // Real-time socket connection
 
   useEffect(() => {
     const init = async () => {

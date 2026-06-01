@@ -7,6 +7,7 @@ import { ok, err, paginate } from '../types/index'
 import { generateOrderNumber, calcBonusPoints } from '../utils/helpers'
 import type { OrderStatus } from '@prisma/client'
 import { notifyAdminNewOrder, notifyUserOrderStatus, bot } from '../bot/index'
+import { emitOrderStatusChanged, emitNewOrder, emitCourierAssigned } from '../services/socket'
 
 // ── POST /api/orders ──
 export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
@@ -135,6 +136,8 @@ export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
 
   // Admin ga xabar (async — javobni kechiktirmasin)
   notifyAdminNewOrder(order).catch(console.error)
+  // Socket — real-time admin notification
+  emitNewOrder(order)
 
   return reply.code(201).send(ok(order, `Buyurtma qabul qilindi! +${bonusPoints} ball`))
 }
@@ -280,6 +283,14 @@ export async function updateOrderStatus(req: FastifyRequest, reply: FastifyReply
     },
   })
 
+  // Socket — real-time status update to user
+  emitOrderStatusChanged(updated)
+
+  // Kuryer tayinlanganda unga ham xabar
+  if (courierId && statusUpper === 'ON_THE_WAY') {
+    emitCourierAssigned(courierId, updated)
+  }
+
   // Userga bot orqali xabar
   if (order.user?.telegramId) {
     notifyUserOrderStatus(
@@ -349,6 +360,18 @@ export async function updateCourierLocation(req: FastifyRequest, reply: FastifyR
     where: { id: courierId },
     data:  { lat, lng, lastSeenAt: new Date() },
   })
+
+  // Broadcast to all orders this courier is delivering
+  const { io } = await import('../services/socket')
+  if (io) {
+    const activeOrders = await prisma.order.findMany({
+      where: { courierId, status: 'ON_THE_WAY' },
+      select: { id: true },
+    })
+    activeOrders.forEach(o => {
+      io.to(`order:${o.id}`).emit('courier:moved', { lat, lng })
+    })
+  }
 
   return reply.send({ ok: true })
 }

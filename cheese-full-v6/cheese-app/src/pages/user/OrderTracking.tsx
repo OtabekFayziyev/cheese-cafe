@@ -8,6 +8,7 @@ import {
 import clsx from 'clsx'
 import { useOrderStore } from '@/store'
 import { ordersAPI } from '@/api/client'
+import { useOrderSocket } from '@/hooks/useSocket'
 import { useFormat, useTelegram } from '@/hooks'
 import { AppShell } from '@/components/layout/AppShell'
 import type { OrderStatus } from '@/types'
@@ -74,17 +75,29 @@ export default function OrderTracking() {
     return () => clearInterval(t)
   }, [activeOrder?.id])
 
-  // Real courier location
+  // Real courier location via Socket.io + HTTP fallback
   const [courierLoc,  setCourierLoc]  = useState<{ lat: number; lng: number } | null>(null)
   const [courierInfo, setCourierInfo] = useState<{ name: string; phone: string } | null>(null)
 
+  const { onCourierMoved } = useOrderSocket(activeOrder?.id)
+
   useEffect(() => {
-    if (!(activeOrder as any)?.courierId || activeOrder?.status !== 'on_the_way') return
-    const poll = async () => {
+    if (activeOrder?.status !== 'on_the_way') return
+
+    // Socket.io real-time
+    const cleanup = onCourierMoved((loc) => {
+      setCourierLoc({ lat: loc.lat, lng: loc.lng })
+    })
+
+    // HTTP fallback — first load + every 30s
+    const loadCourierInfo = async () => {
+      if (!(activeOrder as any)?.courierId) return
       try {
         const loc = await ordersAPI.getCourierLocation(String((activeOrder as any).courierId))
         if (loc?.lat && loc?.lng) {
           setCourierLoc({ lat: Number(loc.lat), lng: Number(loc.lng) })
+        }
+        if (loc?.firstName) {
           setCourierInfo({
             name:  loc.firstName || 'Kuryer',
             phone: loc.phone     || '',
@@ -92,9 +105,13 @@ export default function OrderTracking() {
         }
       } catch {}
     }
-    poll()
-    const t = setInterval(poll, 30000)
-    return () => clearInterval(t)
+    loadCourierInfo()
+    const t = setInterval(loadCourierInfo, 30000)
+
+    return () => {
+      cleanup?.()
+      clearInterval(t)
+    }
   }, [(activeOrder as any)?.courierId, activeOrder?.status])
 
   const order = activeOrder || orderHistory[0]
