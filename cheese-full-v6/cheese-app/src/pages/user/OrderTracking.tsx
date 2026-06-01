@@ -56,13 +56,21 @@ export default function OrderTracking() {
     const poll = async () => {
       try {
         const updated = await ordersAPI.getOne(activeOrder.id)
-        if (updated && updated.status !== activeOrder.status) {
-          setActiveOrder({ ...activeOrder, ...updated, status: updated.status.toLowerCase() })
-        }
+        if (!updated) return
+        const newStatus = (updated.status || '').toLowerCase()
+        const curStatus = (activeOrder.status || '').toLowerCase()
+        // Always update to get latest data
+        setActiveOrder({
+          ...activeOrder,
+          ...updated,
+          status: newStatus,
+          items: updated.items || activeOrder.items,
+          courier: updated.courier || (activeOrder as any).courier,
+        })
       } catch {}
     }
     poll()
-    const t = setInterval(poll, 5000)
+    const t = setInterval(poll, 3000) // har 3s
     return () => clearInterval(t)
   }, [activeOrder?.id])
 

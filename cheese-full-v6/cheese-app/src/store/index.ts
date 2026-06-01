@@ -21,6 +21,7 @@ interface CartState {
   applyPromo: (code: string, discount: number) => void
   clearPromo: () => void
   setDeliveryType: (type: 'delivery' | 'pickup') => void
+  setDeliveryFee:  (fee: number) => void
   clear: () => void
   totalItems: () => number
   subtotal: () => number
