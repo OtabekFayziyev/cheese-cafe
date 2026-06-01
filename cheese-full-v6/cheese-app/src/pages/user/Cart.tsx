@@ -100,6 +100,12 @@ export default function Cart() {
 
   const handlePlaceOrder = async () => {
     if (!items.length) return
+    // Cafe yopiq bo'lsa buyurtma berilmasin
+    if (!isOpen) {
+      toast.error('🔒 Cafe hozir yopiq! Ish vaqtida qayta urining.', { duration: 4000 })
+      haptic.error?.() || haptic.medium()
+      return
+    }
     if (deliveryType === 'delivery' && !addrInput.trim()) {
       toast.error('Manzilni kiriting'); return
     }
@@ -338,10 +344,29 @@ export default function Cart() {
         </div>
 
         <div className={styles.orderBtnWrap}>
-          <Button variant="primary" size="lg" fullWidth loading={placing}
-            onClick={handlePlaceOrder} icon={placing?undefined:'✨'}>
-            {placing?'Buyurtma berilmoqda...':'Buyurtma berish'}
-          </Button>
+          <button
+            onClick={handlePlaceOrder}
+            disabled={placing || !isOpen}
+            style={{
+              width: '100%',
+              padding: '16px',
+              borderRadius: 'var(--r-lg)',
+              border: 'none',
+              background: (!isOpen || placing) ? 'var(--surface-2)' : 'var(--yellow)',
+              color: (!isOpen || placing) ? 'var(--text-muted)' : '#1A1A1A',
+              fontSize: 16,
+              fontWeight: 700,
+              cursor: (!isOpen || placing) ? 'not-allowed' : 'pointer',
+              fontFamily: "var(--font-body)",
+              transition: 'all .2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            {placing ? '⏳ Buyurtma berilmoqda...' : !isOpen ? '🔒 Cafe hozir yopiq' : '✨ Buyurtma berish'}
+          </button>
         </div>
 
         {/* Modals */}

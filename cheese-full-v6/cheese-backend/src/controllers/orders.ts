@@ -24,6 +24,14 @@ export async function createOrder(req: FastifyRequest, reply: FastifyReply) {
 
   if (!items?.length) return reply.code(400).send(err('Savat bo\'sh'))
 
+  // Cafe yopiq bo'lsa buyurtma qabul qilinmaydi
+  const cafeStatus = await prisma.cafeSetting.findFirst({
+    where: { key: { in: ['is_open', 'isOpen'] } },
+  })
+  if (cafeStatus && (cafeStatus.value === 'false' || cafeStatus.value === false)) {
+    return reply.code(400).send(err('Cafe hozir yopiq. Iltimos ish vaqtida qayta urining.'))
+  }
+
   let subtotal    = 0
   // Yetkazish narxi: frontenddan kelgan yoki backend da qayta hisoblanadi
   let deliveryFee = 0
