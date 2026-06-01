@@ -8,7 +8,7 @@ import {
   ChevronDown, ChevronUp, Tag, MessageSquare, Bike, Store
 } from 'lucide-react'
 import { useCartStore, useUserStore, useOrderStore } from '@/store'
-import { useFormat, useLocation, useTelegram } from '@/hooks'
+import { useFormat, useLocation, useTelegram, useWorkHours } from '@/hooks'
 import { ordersAPI } from '@/api/client'
 import { VALID_PROMOS } from '@/api/mockData'
 import { AppShell, Page } from '@/components/layout/AppShell'
@@ -47,6 +47,7 @@ export default function Cart() {
   const [showRestNote, setShowRestNote] = useState(false)
   const [restNote,     setRestNote]     = useState('')
   const [ordering,     setOrdering]     = useState(false)
+  const { isOpen } = useWorkHours()
   const [distance,     setDistance]     = useState('')
 
   useEffect(() => {
