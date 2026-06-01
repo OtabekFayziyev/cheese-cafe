@@ -18,7 +18,7 @@ function createSocket(userId: string, role: string): Socket {
   _userId = userId
   _socket = io(API_URL, {
     auth:              { userId, role: role.toUpperCase() },
-    transports:        ['websocket', 'polling'],
+    transports:        ['polling', 'websocket'],  // polling first for Render
     reconnection:      true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 10,
