@@ -33,9 +33,11 @@ export default function Home() {
   useColorScheme()
 
   const { isOpen, openTime, closeTime } = useWorkHours()
-  const { address, coords, loading: locLoading }  = useLocation()
+  const { address, coords, loading: locLoading } = useLocation()
   const user         = useUserStore(s => s.user)
+  // Full subscription — socket event kelganda re-render bo'ladi
   const activeOrder  = useOrderStore(s => s.activeOrder)
+  const orderStatus  = useOrderStore(s => s.activeOrder?.status)
   const displayName  = tgUser?.first_name || user?.firstName || ''
 
   const [slide, setSlide] = useState(0)
@@ -199,9 +201,27 @@ export default function Home() {
           <div className={styles.trackingBanner}
             onClick={() => { haptic.light(); navigate('/user/order-tracking') }}>
             <div className={styles.trackingLeft}>
-              <span className={styles.trackingIcon}>📦</span>
+              <span className={styles.trackingIcon}>
+                {orderStatus === 'delivered' ? '🎉' :
+                 orderStatus === 'on_the_way' ? '🛵' :
+                 orderStatus === 'preparing' ? '👨‍🍳' :
+                 orderStatus === 'ready' ? '📦' : '📦'}
+              </span>
               <div>
-                <div className={styles.trackingTitle}>Buyurtma holati</div>
+                <div className={styles.trackingTitle}>
+                  {(() => {
+                    const labels: Record<string, string> = {
+                      pending:    'Qabul kutilmoqda...',
+                      accepted:   'Qabul qilindi!',
+                      preparing:  'Tayyorlanmoqda...',
+                      ready:      "Tayyor! Kuryer yo'lda",
+                      on_the_way: 'Kuryerga berildi!',
+                      delivered:  'Yetkazildi!',
+                      cancelled:  'Bekor qilindi',
+                    }
+                    return labels[orderStatus || 'pending'] || 'Buyurtma holati'
+                  })()}
+                </div>
                 <div className={styles.trackingSub}>
                   {(activeOrder as any).orderNumber} · Kuzatish uchun bosing
                 </div>
@@ -291,4 +311,3 @@ export default function Home() {
     </AppShell>
   )
 }
-
