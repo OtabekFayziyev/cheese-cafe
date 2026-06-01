@@ -68,6 +68,28 @@ function AppRoutes() {
     }, [])
   )
 
+  // HTTP polling backup — socket ishlamasa ham ishlaydi
+  useEffect(() => {
+    const poll = async () => {
+      const current = useOrderStore.getState().activeOrder
+      if (!current?.id) return
+      try {
+        const updated = await ordersAPI.getOne(current.id)
+        if (!updated) return
+        const newStatus = (updated.status || '').toLowerCase()
+        if (newStatus !== current.status) {
+          useOrderStore.getState().setActiveOrder({
+            ...current,
+            ...updated,
+            status: newStatus as any,
+          })
+        }
+      } catch {}
+    }
+    const t = setInterval(poll, 5000)
+    return () => clearInterval(t)
+  }, [])
+
   useEffect(() => {
     const init = async () => {
       const tg = (window as any).Telegram?.WebApp
