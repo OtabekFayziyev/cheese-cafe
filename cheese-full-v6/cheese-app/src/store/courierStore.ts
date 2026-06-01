@@ -105,6 +105,7 @@ interface CourierState {
 
   setOnline:        (online: boolean) => void
   setActiveOrders:  (orders: Order[]) => void
+  addActiveOrder:   (order: Order) => void
   setHistory:       (orders: Order[]) => void
   setStats:         (stats: CourierStats) => void
   updateOrderStatus:(id: string, status: OrderStatus) => void
@@ -138,6 +139,11 @@ export const useCourierStore = create<CourierState>()(
 
       setOnline:       (online) => set(s => ({ profile: { ...s.profile, isOnline: online } })),
       setActiveOrders: (orders) => set({ activeOrders: orders }),
+      addActiveOrder: (order) => set(s => ({
+        activeOrders: s.activeOrders.find(o => o.id === order.id)
+          ? s.activeOrders
+          : [order, ...s.activeOrders]
+      })),
       setHistory:      (orders) => set({ history: orders }),
       setStats:        (stats)  => set({ stats }),
 
