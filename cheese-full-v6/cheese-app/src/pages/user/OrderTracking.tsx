@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Phone, MessageCircle, MapPin,
@@ -8,7 +8,7 @@ import {
 import clsx from 'clsx'
 import { useOrderStore } from '@/store'
 import { ordersAPI } from '@/api/client'
-import { useOrderSocket } from '@/hooks/useSocket'
+import { useOrderSocket, sendCourierLocation } from '@/hooks/useSocket'
 import { useFormat, useTelegram } from '@/hooks'
 import { AppShell } from '@/components/layout/AppShell'
 import type { OrderStatus } from '@/types'
@@ -79,39 +79,27 @@ export default function OrderTracking() {
   const [courierLoc,  setCourierLoc]  = useState<{ lat: number; lng: number } | null>(null)
   const [courierInfo, setCourierInfo] = useState<{ name: string; phone: string } | null>(null)
 
-  const { onCourierMoved } = useOrderSocket(activeOrder?.id)
+  // Socket.io + HTTP fallback for courier location
+  const handleCourierMoved = useCallback((loc: {lat: number, lng: number}) => {
+    setCourierLoc({ lat: loc.lat, lng: loc.lng })
+  }, [])
+
+  useOrderSocket(activeOrder?.id, handleCourierMoved)
 
   useEffect(() => {
     if (activeOrder?.status !== 'on_the_way') return
+    if (!(activeOrder as any)?.courierId) return
 
-    // Socket.io real-time
-    const cleanup = onCourierMoved((loc) => {
-      setCourierLoc({ lat: loc.lat, lng: loc.lng })
-    })
-
-    // HTTP fallback — first load + every 30s
-    const loadCourierInfo = async () => {
-      if (!(activeOrder as any)?.courierId) return
+    const load = async () => {
       try {
         const loc = await ordersAPI.getCourierLocation(String((activeOrder as any).courierId))
-        if (loc?.lat && loc?.lng) {
-          setCourierLoc({ lat: Number(loc.lat), lng: Number(loc.lng) })
-        }
-        if (loc?.firstName) {
-          setCourierInfo({
-            name:  loc.firstName || 'Kuryer',
-            phone: loc.phone     || '',
-          })
-        }
+        if (loc?.lat && loc?.lng) setCourierLoc({ lat: Number(loc.lat), lng: Number(loc.lng) })
+        if (loc?.firstName) setCourierInfo({ name: loc.firstName, phone: loc.phone || '' })
       } catch {}
     }
-    loadCourierInfo()
-    const t = setInterval(loadCourierInfo, 30000)
-
-    return () => {
-      cleanup?.()
-      clearInterval(t)
-    }
+    load()
+    const t = setInterval(load, 30000)
+    return () => clearInterval(t)
   }, [(activeOrder as any)?.courierId, activeOrder?.status])
 
   const order = activeOrder || orderHistory[0]

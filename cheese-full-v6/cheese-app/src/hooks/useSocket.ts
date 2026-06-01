@@ -1,66 +1,66 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useUserStore, useOrderStore } from '@/store'
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || ''
 
-let socket: Socket | null = null
+// Singleton socket
+let _socket: Socket | null = null
 
-export function getSocket(): Socket {
-  if (!socket || !socket.connected) {
-    const user = useUserStore.getState().user
-    socket = io(API_URL, {
-      auth: {
-        userId: user?.telegramId,
-        role:   (user?.role || 'USER').toUpperCase(),
-      },
-      transports:     ['websocket', 'polling'],
-      reconnection:    true,
-      reconnectionDelay: 1000,
-    })
-  }
-  return socket
+export function getSocket(userId?: string, role?: string): Socket {
+  if (_socket?.connected) return _socket
+  _socket = io(API_URL, {
+    auth:       { userId, role: (role || 'USER').toUpperCase() },
+    transports: ['websocket', 'polling'],
+    reconnection:      true,
+    reconnectionDelay: 1000,
+    timeout:           10000,
+  })
+  return _socket
 }
 
-// Global socket — App.tsx da bir marta chaqiriladi
+// ── Global hook — App.tsx da bir marta ──
 export function useGlobalSocket() {
-  const user           = useUserStore(s => s.user)
-  const setActiveOrder = useOrderStore(s => s.setActiveOrder)
-  const activeOrder    = useOrderStore(s => s.activeOrder)
+  const user    = useUserStore(s => s.user)
+  const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
     if (!user?.telegramId) return
 
     const s = io(API_URL, {
-      auth: {
-        userId: String(user.telegramId),
-        role:   (user.role || 'USER').toUpperCase(),
-      },
+      auth:       { userId: String(user.telegramId), role: (user.role || 'USER').toUpperCase() },
       transports: ['websocket', 'polling'],
-      reconnection: true,
+      reconnection:      true,
+      reconnectionDelay: 1000,
     })
 
-    socket = s
+    socketRef.current = s
+    _socket = s
 
     s.on('connect', () => {
-      console.log('🔌 Socket connected:', s.id)
-      // Join active order room
+      console.log('🔌 Socket connected')
+      // Aktiv buyurtma xonasiga qo'shilish
       const order = useOrderStore.getState().activeOrder
       if (order?.id) s.emit('track:order', order.id)
     })
 
-    // Order status changed
+    // ── ORDER STATUS CHANGED ──
     s.on('order:status', (data: { id: string; status: string; courier?: any }) => {
-      const current = useOrderStore.getState().activeOrder
+      console.log('📦 order:status', data)
+      const store   = useOrderStore.getState()
+      const current = store.activeOrder
       if (!current) return
-      if (current.id === data.id || (current as any).id === data.id) {
-        const newStatus = data.status.toLowerCase()
-        useOrderStore.getState().setActiveOrder({
-          ...current,
-          status: newStatus as any,
-          ...(data.courier && { courier: data.courier }),
-        })
-      }
+
+      const newStatus = data.status.toLowerCase()
+      store.setActiveOrder({
+        ...current,
+        status:  newStatus as any,
+        courier: data.courier || (current as any).courier,
+      })
+    })
+
+    s.on('connect_error', (err) => {
+      console.warn('🔌 Socket error:', err.message)
     })
 
     s.on('disconnect', () => {
@@ -68,42 +68,31 @@ export function useGlobalSocket() {
     })
 
     return () => {
+      s.removeAllListeners()
       s.disconnect()
-      socket = null
+      _socket = null
+      socketRef.current = null
     }
   }, [user?.telegramId])
 }
 
-// Order tracking uchun — courier location
-export function useOrderSocket(orderId: string | undefined) {
-  const socketRef = useRef<Socket | null>(null)
-
-  const onCourierMoved = useCallback((callback: (loc: { lat: number; lng: number }) => void) => {
-    if (!orderId) return
-    const s = getSocket()
-    socketRef.current = s
-    s.emit('track:order', orderId)
-    s.on('courier:moved', callback)
-    return () => s.off('courier:moved', callback)
-  }, [orderId])
-
+// ── Order tracking — courier location ──
+export function useOrderSocket(orderId: string | undefined, onLocation: (loc: {lat: number, lng: number}) => void) {
   useEffect(() => {
-    return () => {
-      if (socketRef.current && orderId) {
-        socketRef.current.off('courier:moved')
-      }
-    }
-  }, [orderId])
+    if (!orderId) return
+    const s = _socket
+    if (!s) return
 
-  return { onCourierMoved }
+    s.emit('track:order', orderId)
+    s.on('courier:moved', onLocation)
+
+    return () => { s.off('courier:moved', onLocation) }
+  }, [orderId, onLocation])
 }
 
-// Courier uchun — location yuborish
-export function useCourierSocket() {
-  const sendLocation = useCallback((lat: number, lng: number, orderId: string) => {
-    const s = getSocket()
-    s.emit('courier:location', { lat, lng, orderId })
-  }, [])
-
-  return { sendLocation }
+// ── Courier location sender ──
+export function sendCourierLocation(lat: number, lng: number, orderId: string) {
+  if (_socket?.connected) {
+    _socket.emit('courier:location', { lat, lng, orderId })
+  }
 }
