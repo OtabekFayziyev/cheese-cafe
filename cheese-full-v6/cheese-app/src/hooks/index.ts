@@ -66,11 +66,12 @@ export function useWorkHours() {
   const { settings } = useCafeStore()
   const [backendIsOpen, setBackendIsOpen] = useState<boolean|null>(null)
 
-  // Load from DB on mount
+  // Poll cafe status every 5s — simple and reliable
   useEffect(() => {
+    const API = (import.meta as any).env?.VITE_API_URL || ''
+
     const load = async () => {
       try {
-        const API = (import.meta as any).env?.VITE_API_URL || ''
         const res  = await fetch(`${API}/api/settings`)
         const data = await res.json()
         const s    = data?.data?.settings
@@ -80,15 +81,10 @@ export function useWorkHours() {
         }
       } catch {}
     }
-    load()
 
-    // Listen to custom event from socket hook
-    const handler = (e: Event) => {
-      const val = (e as CustomEvent).detail?.isOpen
-      if (typeof val === 'boolean') setBackendIsOpen(val)
-    }
-    window.addEventListener('__cafe_status__', handler)
-    return () => window.removeEventListener('__cafe_status__', handler)
+    load()
+    const t = setInterval(load, 5000)
+    return () => clearInterval(t)
   }, [])
 
   const checkOpen = useCallback(() => {
