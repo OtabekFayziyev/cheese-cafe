@@ -42,12 +42,16 @@ export default function Tasks() {
     toast.success(`${order.id} qabul qilindi — yo'lga chiqildi!`)
   }
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!confirmDone) return
     haptic.success()
+    try {
+      // Backend ga DELIVERED yuborish
+      await ordersAPI.courierUpdateStatus(confirmDone.id, 'DELIVERED')
+    } catch {}
     completeOrder(confirmDone.id)
     confetti({ particleCount:80, spread:70, origin:{y:.5}, colors:['#F5C800','#22C55E','#fff'] })
-    toast.success('🎉 Yetkazildi! +' + fmt(confirmDone.deliveryFee))
+    toast.success('🎉 Yetkazildi! +' + fmt(confirmDone.deliveryFee || 0))
     setConfirmDone(null)
     setSelectedOrder(null)
   }

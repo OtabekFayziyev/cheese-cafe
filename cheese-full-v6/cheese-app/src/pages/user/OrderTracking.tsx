@@ -285,8 +285,18 @@ export default function OrderTracking() {
             <div className={styles.deliveredTitle}>🎉 Taomingizdan zavqlaning!</div>
             <div className={styles.ratingRow}>
               {[1,2,3,4,5].map(star => (
-                <button key={star} className={styles.starBtn}>
-                  <Star size={28} color="#F5C800" strokeWidth={1.5} />
+                <button
+                  key={star}
+                  className={styles.starBtn}
+                  onClick={() => { haptic.medium(); toast.success(`⭐ ${star} yulduz! Rahmat!`) }}
+                  style={{ fontSize: 0 }}
+                >
+                  <Star
+                    size={32}
+                    color="#F5C800"
+                    fill="#F5C800"
+                    strokeWidth={1.5}
+                  />
                 </button>
               ))}
             </div>
